@@ -311,7 +311,7 @@ GameObject* TutorialGame::AddSphereToWorld(const Vector3& position, float radius
 }
 
 GameObject* TutorialGame::AddCubeToWorld(const Vector3& position, Vector3 dimensions, float inverseMass) {
-	GameObject* cube = new GameObject();
+	GameObject* cube = new GameObject("cube", 1);
 
 	AABBVolume* volume = new AABBVolume(dimensions);
 	cube->SetBoundingVolume((CollisionVolume*)volume);
@@ -359,7 +359,7 @@ GameObject* TutorialGame::AddEnemyToWorld(const Vector3& position) {
 	float meshSize		= 3.0f;
 	float inverseMass	= 0.5f;
 
-	GameObject* character = new GameObject();
+	GameObject* character = new GameObject("Enemy",0);
 
 	AABBVolume* volume = new AABBVolume(Vector3(0.3f, 0.9f, 0.3f) * meshSize);
 	character->SetBoundingVolume((CollisionVolume*)volume);
@@ -481,6 +481,15 @@ bool TutorialGame::SelectObject() {
 				selectionObject = (GameObject*)closestCollision.node;
 
 				selectionObject->GetRenderObject()->SetColour(Vector4(0, 1, 0, 1));
+
+				// Code for finding object in front of selected object
+				//Ray objectRay = CollisionDetection::BuildRayFromObject(*selectionObject);
+				//RayCollision forwardCollision;
+				//GameObject* forwardObject;
+				//if (world->Raycast(objectRay, forwardCollision, true)) {
+				//	forwardObject = (GameObject*)forwardCollision.node;
+				//	forwardObject->GetRenderObject()->SetColour(Vector4(1, 0, 0, 1));
+				//}
 				return true;
 			}
 			else {

@@ -11,7 +11,7 @@ namespace NCL::CSC8503 {
 
 	class GameObject	{
 	public:
-		GameObject(std::string name = "");
+		GameObject(std::string name = "", int objectLayer = 0);
 		~GameObject();
 
 		void SetBoundingVolume(CollisionVolume* vol) {
@@ -74,6 +74,10 @@ namespace NCL::CSC8503 {
 			return worldID;
 		}
 
+		int GetLayer() const {
+			return layer;
+		}
+
 	protected:
 		Transform			transform;
 
@@ -84,6 +88,7 @@ namespace NCL::CSC8503 {
 
 		bool		isActive;
 		int			worldID;
+		int			layer;
 		std::string	name;
 
 		Vector3 broadphaseAABB;
