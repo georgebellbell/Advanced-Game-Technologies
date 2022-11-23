@@ -341,7 +341,7 @@ GameObject* TutorialGame::AddPlayerToWorld(const Vector3& position) {
 	float inverseMass	= 0.5f;
 
 	GameObject* character = new GameObject("character");
-	SphereVolume* volume  = new SphereVolume(1.0f);
+	CapsuleVolume* volume  = new CapsuleVolume(0.5f, 0.5f);
 
 	character->SetBoundingVolume((CollisionVolume*)volume);
 

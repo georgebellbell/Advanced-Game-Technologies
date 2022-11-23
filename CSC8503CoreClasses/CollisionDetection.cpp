@@ -133,11 +133,31 @@ bool CollisionDetection::RaySphereIntersection(const Ray&r, const Transform& wor
 
 	collision.rayDistance = sphereProj - (offset);
 	collision.collidedAt = r.GetPosition() + (r.GetDirection() * collision.rayDistance);
+
+
 	return true;
-	return false;
 }
 
 bool CollisionDetection::RayCapsuleIntersection(const Ray& r, const Transform& worldTransform, const CapsuleVolume& volume, RayCollision& collision) {
+	float capsuleRadius = volume.GetRadius();
+	float capsuleHalfHeight = volume.GetHalfHeight();
+
+	SphereVolume capsuleSphere(capsuleRadius);
+	AABBVolume  capsuleAABB(Vector3(capsuleRadius, capsuleHalfHeight, capsuleRadius));
+
+	Vector3 upward = worldTransform.GetOrientation() * Vector3(0, 1, 0);
+
+	Transform capsuleSphere1WorldPosition;
+	capsuleSphere1WorldPosition.SetPosition(worldTransform.GetPosition() + (upward * capsuleHalfHeight));
+
+	Transform capsuleSphere2WorldPosition;
+	capsuleSphere2WorldPosition.SetPosition(worldTransform.GetPosition() - (upward * capsuleHalfHeight));
+
+	if (RaySphereIntersection(r, capsuleSphere1WorldPosition, capsuleSphere, collision) ||
+		RaySphereIntersection(r, capsuleSphere2WorldPosition, capsuleSphere, collision) ||
+		RayAABBIntersection(r, worldTransform, capsuleAABB, collision)) {
+		return true;
+	}
 	return false;
 }
 
@@ -331,12 +351,56 @@ bool  CollisionDetection::OBBSphereIntersection(const OBBVolume& volumeA, const 
 bool CollisionDetection::AABBCapsuleIntersection(
 	const CapsuleVolume& volumeA, const Transform& worldTransformA,
 	const AABBVolume& volumeB, const Transform& worldTransformB, CollisionInfo& collisionInfo) {
+
+	float capsuleRadius = volumeA.GetRadius();
+	float capsuleHalfHeight = volumeA.GetHalfHeight();
+
+	SphereVolume capsuleSphere(capsuleRadius);
+	AABBVolume  capsuleAABB(Vector3(capsuleRadius, capsuleHalfHeight, capsuleRadius));
+
+	Vector3 upward = worldTransformA.GetOrientation() * Vector3(0, 1, 0);
+
+	Transform capsuleSphere1WorldPosition;
+	capsuleSphere1WorldPosition.SetPosition(worldTransformA.GetPosition() + (upward * capsuleHalfHeight));
+
+	Transform capsuleSphere2WorldPosition;
+	capsuleSphere2WorldPosition.SetPosition(worldTransformA.GetPosition() - (upward * capsuleHalfHeight));
+
+	if (AABBSphereIntersection(volumeB, worldTransformB, capsuleSphere, capsuleSphere1WorldPosition, collisionInfo) ||
+		AABBSphereIntersection(volumeB, worldTransformB, capsuleSphere, capsuleSphere2WorldPosition, collisionInfo) ||
+		AABBIntersection(volumeB, worldTransformB, capsuleAABB, worldTransformA, collisionInfo)) {
+		return true;
+	}
+
+
 	return false;
 }
 
 bool CollisionDetection::SphereCapsuleIntersection(
 	const CapsuleVolume& volumeA, const Transform& worldTransformA,
 	const SphereVolume& volumeB, const Transform& worldTransformB, CollisionInfo& collisionInfo) {
+
+	float capsuleRadius = volumeA.GetRadius();
+	float capsuleHalfHeight = volumeA.GetHalfHeight();
+
+	SphereVolume capsuleSphere(capsuleRadius);
+	AABBVolume  capsuleAABB(Vector3(capsuleRadius, capsuleHalfHeight, capsuleRadius));
+
+	Vector3 upward = worldTransformA.GetOrientation() * Vector3(0, 1, 0);
+
+	Transform capsuleSphere1WorldPosition;
+	capsuleSphere1WorldPosition.SetPosition(worldTransformA.GetPosition() + (upward * capsuleHalfHeight));
+
+	Transform capsuleSphere2WorldPosition;
+	capsuleSphere2WorldPosition.SetPosition(worldTransformA.GetPosition() - (upward * capsuleHalfHeight));
+
+	if (SphereIntersection(volumeB, worldTransformB, capsuleSphere, capsuleSphere1WorldPosition, collisionInfo) ||
+		SphereIntersection(volumeB, worldTransformB, capsuleSphere, capsuleSphere2WorldPosition, collisionInfo) ||
+		AABBSphereIntersection(capsuleAABB, worldTransformA, volumeB, worldTransformB, collisionInfo)) {
+		return true;
+	}
+
+
 	return false;
 }
 
