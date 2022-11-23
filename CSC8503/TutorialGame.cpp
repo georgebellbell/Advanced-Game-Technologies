@@ -481,15 +481,6 @@ bool TutorialGame::SelectObject() {
 				selectionObject = (GameObject*)closestCollision.node;
 
 				selectionObject->GetRenderObject()->SetColour(Vector4(0, 1, 0, 1));
-
-				// Code for finding object in front of selected object
-				//Ray objectRay = CollisionDetection::BuildRayFromObject(*selectionObject);
-				//RayCollision forwardCollision;
-				//GameObject* forwardObject;
-				//if (world->Raycast(objectRay, forwardCollision, true)) {
-				//	forwardObject = (GameObject*)forwardCollision.node;
-				//	forwardObject->GetRenderObject()->SetColour(Vector4(1, 0, 0, 1));
-				//}
 				return true;
 			}
 			else {
@@ -537,6 +528,21 @@ void TutorialGame::MoveSelectedObject() {
 				selectionObject->GetPhysicsObject()->AddForceAtPosition(ray.GetDirection() * forceMagnitude, closestCollision.collidedAt);
 			}
 		}
+	}
+
+	Vector3 forward = selectionObject->GetTransform().GetOrientation() * Vector3(0, 0, -1);
+	Vector3 right = selectionObject->GetTransform().GetOrientation() * Vector3(1, 0, 0);
+	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::W)) {
+		selectionObject->GetPhysicsObject()->AddForceAtPosition(forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
+	}
+	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::A)) {
+		selectionObject->GetPhysicsObject()->AddForceAtPosition(-right * forceMagnitude, selectionObject->GetTransform().GetPosition());
+	}
+	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::S)) {
+		selectionObject->GetPhysicsObject()->AddForceAtPosition(-forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
+	}
+	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::D)) {
+		selectionObject->GetPhysicsObject()->AddForceAtPosition(right * forceMagnitude, selectionObject->GetTransform().GetPosition());
 	}
 }
 
