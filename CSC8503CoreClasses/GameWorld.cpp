@@ -15,7 +15,7 @@ GameWorld::GameWorld()	{
 	shuffleObjects		= false;
 	worldIDCounter		= 0;
 	worldStateCounter	= 0;
-	layerCollisionMatrix[0][1] = false; //  mouse cannot interact with cubes or keeper
+	layerCollisionMatrix[0][1] = true; //  mouse cannot interact with cubes or keeper
 	layerCollisionMatrix[0][0] = true;	// default
 }
 

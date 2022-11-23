@@ -261,7 +261,7 @@ A single function to add a large immoveable cube to the bottom of our world
 
 */
 GameObject* TutorialGame::AddFloorToWorld(const Vector3& position) {
-	GameObject* floor = new GameObject();
+	GameObject* floor = new GameObject("floor");
 
 	Vector3 floorSize = Vector3(200, 2, 200);
 	AABBVolume* volume = new AABBVolume(floorSize);
@@ -289,7 +289,7 @@ physics worlds. You'll probably need another function for the creation of OBB cu
 
 */
 GameObject* TutorialGame::AddSphereToWorld(const Vector3& position, float radius, float inverseMass, bool hollow) {
-	GameObject* sphere = new GameObject();
+	GameObject* sphere = new GameObject("sphere");
 
 	Vector3 sphereSize = Vector3(radius, radius, radius);
 	SphereVolume* volume = new SphereVolume(radius);
@@ -340,7 +340,7 @@ GameObject* TutorialGame::AddPlayerToWorld(const Vector3& position) {
 	float meshSize		= 1.0f;
 	float inverseMass	= 0.5f;
 
-	GameObject* character = new GameObject();
+	GameObject* character = new GameObject("character");
 	SphereVolume* volume  = new SphereVolume(1.0f);
 
 	character->SetBoundingVolume((CollisionVolume*)volume);
@@ -385,7 +385,7 @@ GameObject* TutorialGame::AddEnemyToWorld(const Vector3& position) {
 }
 
 GameObject* TutorialGame::AddBonusToWorld(const Vector3& position) {
-	GameObject* apple = new GameObject();
+	GameObject* apple = new GameObject("apple");
 
 	SphereVolume* volume = new SphereVolume(0.5f);
 	apple->SetBoundingVolume((CollisionVolume*)volume);
