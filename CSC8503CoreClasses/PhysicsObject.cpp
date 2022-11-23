@@ -59,9 +59,17 @@ void PhysicsObject::InitCubeInertia() {
 
 void PhysicsObject::InitSphereInertia() {
 	float radius	= transform->GetScale().GetMaxElement();
-	float i			= 2.5f * inverseMass / (radius*radius);
+	float i = 2.5f * inverseMass / (radius * radius);
 
 	inverseInertia	= Vector3(i, i, i);
+}
+
+void PhysicsObject::InitHollowSphereIntertia()
+{
+	float radius = transform->GetScale().GetMaxElement();
+	float i = 1.5f * inverseMass / (radius * radius);
+
+	inverseInertia = Vector3(i, i, i);
 }
 
 void PhysicsObject::UpdateInertiaTensor() {
