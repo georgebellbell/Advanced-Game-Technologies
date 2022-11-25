@@ -12,6 +12,8 @@
 using namespace NCL;
 using namespace CSC8503;
 
+const float SLEEP_THRESHOLD = 0.0005f;
+const int SLEEP_FRAME_THRESHOLD = 100;
 PhysicsSystem::PhysicsSystem(GameWorld& g) : gameWorld(g)	{
 	applyGravity	= false;
 	useBroadPhase	= false;	
@@ -206,9 +208,14 @@ void PhysicsSystem::BasicCollisionDetection() {
 			if ((*j)->GetPhysicsObject() == nullptr) {
 				continue;
 			}
+			if ((*i)->IsSleeping() && (*j)->IsSleeping()) { // if both objects are sleeping, they will never interact
+				continue;
+			}
 			CollisionDetection::CollisionInfo info;
 			if (CollisionDetection::ObjectIntersection(*i, *j, info)) {
 				std::cout << "Collision between " << (*i)->GetName() << " and " << (*j)->GetName() << std::endl;
+				(*i)->SetToSleep(false);
+				(*j)->SetToSleep(false);
 				info.framesLeft = numCollisionFrames;
 				allCollisions.insert(info);
 			}
@@ -224,6 +231,7 @@ so that objects separate back out.
 
 */
 void PhysicsSystem::ImpulseResolveCollision(GameObject& a, GameObject& b, CollisionDetection::ContactPoint& p) const {
+	PhysicsObject* physA = a.GetPhysicsObject();
 
 }
 
@@ -264,7 +272,7 @@ void PhysicsSystem::IntegrateAccel(float dt) {
 	for (auto i = first; i != last; i++)
 	{
 		PhysicsObject* object = (*i)->GetPhysicsObject();
-		if (object == nullptr) {
+		if (object == nullptr || (*i)->IsSleeping()) {
 			continue;
 		}
 		float inverseMass = object->GetInverseMass();
@@ -301,7 +309,7 @@ throughout a physics update, to slowly move the objects through
 the world, looking for collisions.
 */
 void PhysicsSystem::IntegrateVelocity(float dt) {
-	std::vector<GameObject*>::const_iterator first, last;
+		std::vector<GameObject*>::const_iterator first, last;
 	gameWorld.GetObjectIterators(first, last);
 
 	float frameLinearDamping = 1.0f - (linearDamping * dt);
@@ -309,12 +317,13 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 	for (auto i = first; i != last; i++)
 	{
 		PhysicsObject* object = (*i)->GetPhysicsObject();
-		if (object == nullptr) {
+		if (object == nullptr || (*i)->IsSleeping()) {
 			continue;
 		}
 		Transform& transform = (*i)->GetTransform();
-
 		Vector3 position = transform.GetPosition();
+		transform.SetPreviousPosition(position);
+
 		Vector3 linearVel = object->GetLinearVelocity();
 		position += linearVel * dt;
 		transform.SetPosition(position);
@@ -334,6 +343,15 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 		float frameAnglularDamping = 1.0f - (linearDamping * dt);
 		angVel = angVel * frameAnglularDamping;
 		object->SetAngularVelocity(angVel);
+
+		float changeInPosition = (position - transform.GetPreviousPosition()).Length();
+		if (changeInPosition <= SLEEP_THRESHOLD) {
+			(*i)->IncrementStationaryFrames();
+			if ((*i)->GetStationaryFrameCount() == SLEEP_FRAME_THRESHOLD) {
+				(*i)->SetToSleep(true);
+			}
+		}
+
 	}
 }
 

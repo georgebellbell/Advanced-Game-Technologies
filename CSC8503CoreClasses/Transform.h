@@ -13,11 +13,16 @@ namespace NCL {
 			~Transform();
 
 			Transform& SetPosition(const Vector3& worldPos);
+			void SetPreviousPosition(const Vector3& previousPos) { previousPosition = previousPos; }
 			Transform& SetScale(const Vector3& worldScale);
 			Transform& SetOrientation(const Quaternion& newOr);
 
 			Vector3 GetPosition() const {
 				return position;
+			}
+
+			Vector3 GetPreviousPosition() const {
+				return previousPosition;
 			}
 
 			Vector3 GetScale() const {
@@ -31,12 +36,14 @@ namespace NCL {
 			Matrix4 GetMatrix() const {
 				return matrix;
 			}
+
+
 			void UpdateMatrix();
 		protected:
 			Matrix4		matrix;
 			Quaternion	orientation;
 			Vector3		position;
-
+			Vector3		previousPosition;
 			Vector3		scale;
 		};
 	}

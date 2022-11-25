@@ -19,5 +19,13 @@ namespace NCL {
 		~CollisionVolume() {}
 
 		VolumeType type;
+		void SetDiscrete(bool isDiscrete) { discrete = isDiscrete; }
+		bool IsDiscrete() { return discrete; }
+
+		void SetTrigger(bool isTrigger) { trigger = isTrigger; }
+		bool IsTrigger() { return trigger; }
+	protected:
+		bool discrete = true;
+		bool trigger = false;
 	};
 }

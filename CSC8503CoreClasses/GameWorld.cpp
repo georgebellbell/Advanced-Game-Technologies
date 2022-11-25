@@ -96,7 +96,7 @@ bool GameWorld::Raycast(Ray& r, RayCollision& closestCollision, bool closestObje
 		bool detectableCollision = layerCollisionMatrix[0][i->GetLayer()];
 		RayCollision thisCollision;
 		if (CollisionDetection::RayIntersection(r, *i, thisCollision) && detectableCollision) {
-				
+			i->SetToSleep(false);
 			if (!closestObject) {	
 				closestCollision		= collision;
 				closestCollision.node = i;
