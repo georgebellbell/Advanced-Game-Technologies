@@ -56,6 +56,14 @@ namespace NCL {
 				angularVelocity = v;
 			}
 
+			float Elasticity() {
+				return elasticity;
+			}
+
+			void SetElasticity(float e) {
+				elasticity = e;
+			}
+
 			void InitCubeInertia();
 			void InitSphereInertia();
 			void InitHollowSphereIntertia();
@@ -65,6 +73,31 @@ namespace NCL {
 			Matrix3 GetInertiaTensor() const {
 				return inverseInteriaTensor;
 			}
+
+			void SetToSleep(bool sleep) {
+				if (!sleep) {
+					ClearStationaryFrames();
+				}
+				sleeping = sleep;
+			}
+
+			bool IsSleeping() {
+				return sleeping;
+			}
+
+			void IncrementStationaryFrames() {
+				stationaryFrames++;
+			}
+
+			void ClearStationaryFrames() {
+				stationaryFrames = 0;
+			}
+
+			int GetStationaryFrameCount() {
+				return stationaryFrames;
+			}
+
+			
 
 		protected:
 			const CollisionVolume* volume;
@@ -83,6 +116,9 @@ namespace NCL {
 			Vector3 torque;
 			Vector3 inverseInertia;
 			Matrix3 inverseInteriaTensor;
+
+			bool sleeping = false;
+			int stationaryFrames = 0;
 		};
 	}
 }

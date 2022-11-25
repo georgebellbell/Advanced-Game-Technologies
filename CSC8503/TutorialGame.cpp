@@ -143,6 +143,15 @@ void TutorialGame::UpdateKeys() {
 	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::G)) {
 		useGravity = !useGravity; //Toggle gravity!
 		physics->UseGravity(useGravity);
+
+		std::vector<GameObject*>::const_iterator first, last;
+		world->GetObjectIterators(first, last);
+
+		for (auto i = first; i != last; i++)
+		{
+			(*i)->GetPhysicsObject()->SetToSleep(false);
+		}
+
 	}
 	//Running certain physics updates in a consistent order might cause some
 	//bias in the calculations - the same objects might keep 'winning' the constraint
@@ -302,7 +311,7 @@ GameObject* TutorialGame::AddSphereToWorld(const Vector3& position, float radius
 
 	sphere->SetRenderObject(new RenderObject(&sphere->GetTransform(), sphereMesh, basicTex, basicShader));
 	sphere->SetPhysicsObject(new PhysicsObject(&sphere->GetTransform(), sphere->GetBoundingVolume()));
-
+	sphere->GetPhysicsObject()->SetElasticity(0.2);
 	sphere->GetPhysicsObject()->SetInverseMass(inverseMass);
 	if (hollow) {
 		sphere->GetPhysicsObject()->InitHollowSphereIntertia();

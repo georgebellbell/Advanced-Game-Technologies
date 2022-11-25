@@ -78,28 +78,7 @@ namespace NCL::CSC8503 {
 			return layer;
 		}
 
-		void SetToSleep(bool sleep) {
-			if (!sleep) {
-				ClearStationaryFrames();
-			}
-			sleeping = sleep;
-		}
-
-		bool IsSleeping() {
-			return sleeping;
-		}
-
-		void IncrementStationaryFrames() {
-			stationaryFrames++;
-		}
-
-		void ClearStationaryFrames() {
-			stationaryFrames = 0;
-		}
-
-		int GetStationaryFrameCount() {
-			return stationaryFrames;
-		}
+		
 		 
 	protected:
 		Transform			transform;
@@ -113,8 +92,7 @@ namespace NCL::CSC8503 {
 		int			worldID;
 		int			layer;
 		std::string	name;
-		bool sleeping = false;
-		int stationaryFrames = 0;
+		
 		Vector3 broadphaseAABB;
 	};
 }

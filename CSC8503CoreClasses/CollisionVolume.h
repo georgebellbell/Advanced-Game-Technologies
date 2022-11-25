@@ -17,13 +17,13 @@ namespace NCL {
 			type = VolumeType::Invalid;
 		}
 		~CollisionVolume() {}
-
-		VolumeType type;
 		void SetDiscrete(bool isDiscrete) { discrete = isDiscrete; }
 		bool IsDiscrete() { return discrete; }
 
 		void SetTrigger(bool isTrigger) { trigger = isTrigger; }
-		bool IsTrigger() { return trigger; }
+		bool IsTrigger() const { return trigger; }
+		VolumeType type;
+		
 	protected:
 		bool discrete = true;
 		bool trigger = false;

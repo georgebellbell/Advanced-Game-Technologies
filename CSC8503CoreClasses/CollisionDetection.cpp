@@ -349,8 +349,8 @@ bool CollisionDetection::SphereIntersection(const SphereVolume& volumeA, const T
 }
 
 //AABB - Sphere Collision
-bool CollisionDetection::AABBSphereIntersection(const AABBVolume& volumeA, const Transform& worldTransformA,
-	const SphereVolume& volumeB, const Transform& worldTransformB, CollisionInfo& collisionInfo) {
+bool CollisionDetection::AABBSphereIntersection(const AABBVolume& volumeA, Transform& worldTransformA,
+	const SphereVolume& volumeB, Transform& worldTransformB, CollisionInfo& collisionInfo) {
 
 	Vector3 boxSize = volumeA.GetHalfDimensions();
 
@@ -415,6 +415,8 @@ bool CollisionDetection::AABBSphereIntersection(const AABBVolume& volumeA, const
 		collisionInfo.AddContactPoint(localA, localB, collisionNormal, penetration);
 
 		//Change position of sphere
+
+		//worldTransformB.SetPosition()
 		return true;
 	}
 
@@ -501,13 +503,16 @@ bool CollisionDetection::AABBCapsuleIntersection(
 
 	Vector3 closestPointOnBox = Maths::Clamp(delta, -boxSize, boxSize);
 	localPoint = delta - closestPointOnBox;
+
 	distance = localPoint.Length();
 
 	if (distance < capsuleRadius) {
 		Vector3 collisionNormal = localPoint.Normalised();
+		Debug::DrawLine(capsulePos, capsulePos + collisionNormal * 10, Debug::CYAN, 20.0f);
+
 		float penetration = (capsuleRadius - distance);
 		Vector3 localA = Vector3();
-		Vector3 localB = -collisionNormal * capsuleRadius;
+		Vector3 localB = -collisionNormal * capsuleRadius ;
 
 		collisionInfo.AddContactPoint(localA, localB, collisionNormal, penetration);
 		return true;

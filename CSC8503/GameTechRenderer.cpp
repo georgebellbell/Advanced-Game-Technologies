@@ -60,7 +60,7 @@ GameTechRenderer::GameTechRenderer(GameWorld& world) : OGLRenderer(*Window::GetW
 	glGenBuffers(1, &textTexVBO);
 
 	SetDebugStringBufferSizes(10000);
-	SetDebugLineBufferSizes(1000);
+	SetDebugLineBufferSizes(100000);
 }
 
 GameTechRenderer::~GameTechRenderer()	{

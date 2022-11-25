@@ -3,7 +3,7 @@
 #include "GameObject.h"
 #include "CollisionDetection.h"
 #include "Quaternion.h"
-
+#include "CollisionVolume.h"
 #include "Constraint.h"
 
 #include "Debug.h"
@@ -12,7 +12,7 @@
 using namespace NCL;
 using namespace CSC8503;
 
-const float SLEEP_THRESHOLD = 0.0005f;
+const float SLEEP_THRESHOLD = 0.00005f;
 const int SLEEP_FRAME_THRESHOLD = 100;
 PhysicsSystem::PhysicsSystem(GameWorld& g) : gameWorld(g)	{
 	applyGravity	= false;
@@ -208,14 +208,19 @@ void PhysicsSystem::BasicCollisionDetection() {
 			if ((*j)->GetPhysicsObject() == nullptr) {
 				continue;
 			}
-			if ((*i)->IsSleeping() && (*j)->IsSleeping()) { // if both objects are sleeping, they will never interact
+			if ((*i)->GetPhysicsObject()->IsSleeping() && (*j)->GetPhysicsObject()->IsSleeping()) { // if both objects are sleeping, they will never interact
 				continue;
 			}
 			CollisionDetection::CollisionInfo info;
 			if (CollisionDetection::ObjectIntersection(*i, *j, info)) {
-				std::cout << "Collision between " << (*i)->GetName() << " and " << (*j)->GetName() << std::endl;
-				(*i)->SetToSleep(false);
-				(*j)->SetToSleep(false);
+				//std::cout << "Collision between " << (*i)->GetName() << " and " << (*j)->GetName() << std::endl;
+				(*i)->GetPhysicsObject()->SetToSleep(false);
+				(*j)->GetPhysicsObject()->SetToSleep(false);
+
+				if (!(*i)->GetBoundingVolume()->IsTrigger() && !(*i)->GetBoundingVolume()->IsTrigger()) {
+					ImpulseResolveCollision(*info.a, *info.b, info.point);
+				}
+				
 				info.framesLeft = numCollisionFrames;
 				allCollisions.insert(info);
 			}
@@ -232,6 +237,51 @@ so that objects separate back out.
 */
 void PhysicsSystem::ImpulseResolveCollision(GameObject& a, GameObject& b, CollisionDetection::ContactPoint& p) const {
 	PhysicsObject* physA = a.GetPhysicsObject();
+	PhysicsObject* physB = b.GetPhysicsObject();
+
+	Transform& transformA = a.GetTransform();
+	Transform& transformB = b.GetTransform();
+
+	float totalMass = physA->GetInverseMass() + physB->GetInverseMass();
+
+	if (totalMass == 0) {
+		return;
+	}
+
+	transformA.SetPosition(transformA.GetPosition() - (p.normal * p.penetration * (physA->GetInverseMass() / totalMass)));
+
+	transformB.SetPosition(transformB.GetPosition() + (p.normal * p.penetration * (physB->GetInverseMass() / totalMass)));
+
+	Vector3 relativeA = p.localA;
+	Vector3 relativeB = p.localB;
+
+	Vector3 angVelocityA = Vector3::Cross(physA->GetAngularVelocity(), relativeA);
+	Vector3 angVelocityB = Vector3::Cross(physB->GetLinearVelocity(), relativeB);
+
+	Vector3 fullVelocityA = physA->GetLinearVelocity() + angVelocityA;
+	Vector3 fullVelocityB = physB->GetLinearVelocity() + angVelocityB;
+
+	Vector3 contactVelocity = fullVelocityB - fullVelocityA;
+
+	float impulseForce = Vector3::Dot(contactVelocity, p.normal);
+
+	Vector3 inertiaA = Vector3::Cross(physA->GetInertiaTensor() * Vector3::Cross(relativeA, p.normal), relativeA);
+	Vector3 inertiaB = Vector3::Cross(physB->GetInertiaTensor() * Vector3::Cross(relativeB, p.normal), relativeB);
+
+	float angularEffect = Vector3::Dot(inertiaA + inertiaB, p.normal);
+
+	float cRestitution = physA->Elasticity() * physB->Elasticity();
+
+	float j = (-(1.0f + cRestitution) * impulseForce) / (totalMass + angularEffect);
+
+	Vector3 fullImpulse = p.normal * j;
+
+	physA->ApplyLinearImpulse(-fullImpulse);
+	physB->ApplyLinearImpulse(fullImpulse);
+
+	physA->ApplyAngularImpulse(Vector3::Cross(relativeA, -fullImpulse));
+	physB->ApplyAngularImpulse(Vector3::Cross(relativeB, -fullImpulse));
+
 
 }
 
@@ -272,7 +322,7 @@ void PhysicsSystem::IntegrateAccel(float dt) {
 	for (auto i = first; i != last; i++)
 	{
 		PhysicsObject* object = (*i)->GetPhysicsObject();
-		if (object == nullptr || (*i)->IsSleeping()) {
+		if (object == nullptr || object->IsSleeping()) {
 			continue;
 		}
 		float inverseMass = object->GetInverseMass();
@@ -317,7 +367,7 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 	for (auto i = first; i != last; i++)
 	{
 		PhysicsObject* object = (*i)->GetPhysicsObject();
-		if (object == nullptr || (*i)->IsSleeping()) {
+		if (object == nullptr || object->IsSleeping()) {
 			continue;
 		}
 		Transform& transform = (*i)->GetTransform();
@@ -346,9 +396,9 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 
 		float changeInPosition = (position - transform.GetPreviousPosition()).Length();
 		if (changeInPosition <= SLEEP_THRESHOLD) {
-			(*i)->IncrementStationaryFrames();
-			if ((*i)->GetStationaryFrameCount() == SLEEP_FRAME_THRESHOLD) {
-				(*i)->SetToSleep(true);
+			object->IncrementStationaryFrames();
+			if (object->GetStationaryFrameCount() == SLEEP_FRAME_THRESHOLD) {
+				object->SetToSleep(true);
 			}
 		}
 
