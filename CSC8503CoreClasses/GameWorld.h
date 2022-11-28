@@ -58,16 +58,14 @@ namespace NCL {
 				return worldStateCounter;
 			}
 
-			int** GetLayerCollisionMatrix() {
-				layerCollisionMatrix;
-			}
+			Layers raycastLayer = defaultLayer;
+			LayerMasks raycastLayerMask = defaultLayerMask;
 
 		protected:
 			std::vector<GameObject*> gameObjects;
 			std::vector<Constraint*> constraints;
 
 			Camera* mainCamera;
-			int layerCollisionMatrix[4][4] = { {true} };
 			bool shuffleConstraints;
 			bool shuffleObjects;
 			int		worldIDCounter;

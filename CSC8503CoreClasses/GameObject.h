@@ -1,6 +1,8 @@
 #pragma once
 #include "Transform.h"
 #include "CollisionVolume.h"
+#include "../Build/CSC8503CoreClasses/CollisionLayerMatrix.h"
+
 
 using std::vector;
 
@@ -8,10 +10,12 @@ namespace NCL::CSC8503 {
 	class NetworkObject;
 	class RenderObject;
 	class PhysicsObject;
-
+	class CollisionLayerMatrix;
 	class GameObject	{
 	public:
-		GameObject(std::string name = "", int objectLayer = 0);
+		GameObject(std::string name = "", 
+					Layers objectLayer = defaultLayer, 
+					LayerMasks = defaultLayerMask);
 		~GameObject();
 
 		void SetBoundingVolume(CollisionVolume* vol) {
@@ -74,12 +78,14 @@ namespace NCL::CSC8503 {
 			return worldID;
 		}
 
-		int GetLayer() const {
-			return layer;
+		Layers GetLayer() const {
+			return objectLayer;
 		}
 
-		
-		 
+		LayerMasks GetLayerMask() const {
+			return objectLayerMask;
+		}
+
 	protected:
 		Transform			transform;
 
@@ -90,7 +96,10 @@ namespace NCL::CSC8503 {
 
 		bool		isActive;
 		int			worldID;
-		int			layer;
+
+		Layers objectLayer = defaultLayer;
+		LayerMasks objectLayerMask = defaultLayerMask;
+
 		std::string	name;
 		
 		Vector3 broadphaseAABB;

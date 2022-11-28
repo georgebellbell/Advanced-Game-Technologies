@@ -37,6 +37,8 @@ namespace NCL {
 
 			void InitDefaultFloor();
 
+			void BridgeConstraintTest();
+
 			bool SelectObject();
 			void MoveSelectedObject();
 			void DebugObjectMovement();

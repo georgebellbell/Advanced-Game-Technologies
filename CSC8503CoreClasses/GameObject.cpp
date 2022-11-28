@@ -6,7 +6,7 @@
 
 using namespace NCL::CSC8503;
 
-GameObject::GameObject(string objectName, int objectLayer)	{
+GameObject::GameObject(string objectName, Layers layer, LayerMasks mask)	{
 	name			= objectName;
 	worldID			= -1;
 	isActive		= true;
@@ -14,7 +14,8 @@ GameObject::GameObject(string objectName, int objectLayer)	{
 	physicsObject	= nullptr;
 	renderObject	= nullptr;
 	networkObject	= nullptr;
-	layer = objectLayer;
+	objectLayer = layer;
+	objectLayerMask = mask;
 }
 
 GameObject::~GameObject()	{

@@ -486,6 +486,7 @@ bool CollisionDetection::AABBCapsuleIntersection(
 	Vector3 centerToTop = topSpherePos - capsulePos;
 	Vector3 AABBToCenter = capsulePos - boxPos;
 
+
 	Vector3 intersection = boxPos;
 
 	float sphereProj, offset, distance, radii, deltaLength;
@@ -508,7 +509,7 @@ bool CollisionDetection::AABBCapsuleIntersection(
 
 	if (distance < capsuleRadius) {
 		Vector3 collisionNormal = localPoint.Normalised();
-		Debug::DrawLine(capsulePos, capsulePos + collisionNormal * 10, Debug::CYAN, 20.0f);
+		//Debug::DrawLine(capsulePos, capsulePos + collisionNormal * 10, Debug::CYAN, 20.0f);
 
 		float penetration = (capsuleRadius - distance);
 		Vector3 localA = Vector3();

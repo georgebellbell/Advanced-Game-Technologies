@@ -16,8 +16,7 @@ GameWorld::GameWorld()	{
 	shuffleObjects		= false;
 	worldIDCounter		= 0;
 	worldStateCounter	= 0;
-	layerCollisionMatrix[0][1] = true; //  mouse cannot interact with cubes or keeper
-	layerCollisionMatrix[0][0] = true;	// default
+	
 }
 
 GameWorld::~GameWorld()	{
@@ -94,7 +93,7 @@ bool GameWorld::Raycast(Ray& r, RayCollision& closestCollision, bool closestObje
 		if (i == ignoreThis) {
 			continue;
 		}
-		bool detectableCollision = layerCollisionMatrix[0][i->GetLayer()];
+		bool detectableCollision = raycastLayerMask & i->GetLayer();
 		RayCollision thisCollision;
 		if (CollisionDetection::RayIntersection(r, *i, thisCollision) && detectableCollision) {
 			i->GetPhysicsObject()->SetToSleep(false);
