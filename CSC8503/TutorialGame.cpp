@@ -419,11 +419,11 @@ void TutorialGame::InitDefaultFloor() {
 }
 
 void TutorialGame::BridgeConstraintTest() {
-	Vector3 cubeSize = Vector3(8, 8, 8);
+	Vector3 cubeSize = Vector3(8, 4, 16);
 
 	float invCubeMass = 5;
 	int numLinks = 10;
-	float maxDistance = 30;
+	float maxDistance = 25;
 	float cubeDistance = 20;
 
 	Vector3 startPos = Vector3(0, 300, 0);
@@ -436,13 +436,26 @@ void TutorialGame::BridgeConstraintTest() {
 
 	for (int i = 0; i < numLinks; ++i) {
 		GameObject* block = AddCubeToWorld(startPos + Vector3((i + 1) * cubeDistance, 0, 0), cubeSize, invCubeMass);
-		PositionConstraint* constraint = new PositionConstraint(previous, block, maxDistance);
-		world->AddConstraint(constraint);
+		PositionConstraint* pConstraint = new PositionConstraint(previous, block, maxDistance);
+		OrientationConstraint* oConstraintY = new OrientationConstraint(previous, block, Vector3(0, 1, 0));
+		OrientationConstraint* oConstraintX = new OrientationConstraint(previous, block, Vector3(1, 0, 0));
+		OrientationConstraint* oConstraintZ = new OrientationConstraint(previous, block, Vector3(0, 0, 1));
+		world->AddConstraint(pConstraint);
+		world->AddConstraint(oConstraintY);
+		world->AddConstraint(oConstraintX);
+		world->AddConstraint(oConstraintZ);
 		previous = block;
 	}
 
-	PositionConstraint* constraint = new PositionConstraint(previous, end, maxDistance);
-	world->AddConstraint(constraint);
+	PositionConstraint* pConstraint = new PositionConstraint(previous, end, maxDistance);
+	OrientationConstraint* oConstraintY = new OrientationConstraint(previous, end, Vector3(0,1,0));
+	OrientationConstraint* oConstraintX = new OrientationConstraint(previous, end, Vector3(1, 0, 0));
+	OrientationConstraint* oConstraintZ = new OrientationConstraint(previous, end, Vector3(0, 0, 1));
+	world->AddConstraint(pConstraint);
+	world->AddConstraint(oConstraintY);
+	world->AddConstraint(oConstraintX);
+	world->AddConstraint(oConstraintZ);
+
 }
 
 void TutorialGame::InitGameExamples() {
@@ -573,19 +586,22 @@ void TutorialGame::MoveSelectedObject() {
 		}
 	}
 
-	Vector3 forward = selectionObject->GetTransform().GetOrientation() * Vector3(0, 0, -1);
-	Vector3 right = selectionObject->GetTransform().GetOrientation() * Vector3(1, 0, 0);
-	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::W)) {
-		selectionObject->GetPhysicsObject()->AddForceAtPosition(forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
-	}
-	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::A)) {
-		selectionObject->GetPhysicsObject()->AddForceAtPosition(-right * forceMagnitude, selectionObject->GetTransform().GetPosition());
-	}
-	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::S)) {
-		selectionObject->GetPhysicsObject()->AddForceAtPosition(-forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
-	}
-	if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::D)) {
-		selectionObject->GetPhysicsObject()->AddForceAtPosition(right * forceMagnitude, selectionObject->GetTransform().GetPosition());
+	if (inSelectionMode) {
+		Vector3 forward = selectionObject->GetTransform().GetOrientation() * Vector3(0, 0, -1);
+		Vector3 right = selectionObject->GetTransform().GetOrientation() * Vector3(1, 0, 0);
+		if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::W)) {
+			selectionObject->GetPhysicsObject()->AddForceAtPosition(forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
+		}
+		if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::A)) {
+			selectionObject->GetPhysicsObject()->AddForceAtPosition(-right * forceMagnitude, selectionObject->GetTransform().GetPosition());
+		}
+		if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::S)) {
+			selectionObject->GetPhysicsObject()->AddForceAtPosition(-forward * forceMagnitude, selectionObject->GetTransform().GetPosition());
+		}
+		if (Window::GetKeyboard()->KeyDown(NCL::KeyboardKeys::D)) {
+			selectionObject->GetPhysicsObject()->AddForceAtPosition(right * forceMagnitude, selectionObject->GetTransform().GetPosition());
+		}
+
 	}
 }
 

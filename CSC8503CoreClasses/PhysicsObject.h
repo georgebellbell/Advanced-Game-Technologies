@@ -78,6 +78,9 @@ namespace NCL {
 				if (!sleep) {
 					ClearStationaryFrames();
 				}
+				else {
+					ClearForces();
+				}
 				sleeping = sleep;
 			}
 

@@ -1,5 +1,6 @@
 #include "PhysicsSystem.h"
 #include "PhysicsObject.h"
+#include "RenderObject.h"
 #include "GameObject.h"
 #include "CollisionDetection.h"
 #include "Quaternion.h"
@@ -12,7 +13,7 @@
 using namespace NCL;
 using namespace CSC8503;
 
-const float SLEEP_THRESHOLD = 0.00005f;
+const float SLEEP_THRESHOLD = 0.0005f;
 const int SLEEP_FRAME_THRESHOLD = 100;
 PhysicsSystem::PhysicsSystem(GameWorld& g) : gameWorld(g)	{
 	applyGravity	= false;
@@ -318,6 +319,13 @@ void PhysicsSystem::BroadPhase() {
 		CollisionDetection::CollisionInfo info;
 		for (auto i = data.begin(); i != data.end(); ++i) {
 			for (auto j = std::next(i); j != data.end(); ++j) {
+
+				if (!(((*i).object->GetLayerMask() & (*j).object->GetLayer()) && ((*j).object->GetLayerMask() & (*i).object->GetLayer()))) {
+					continue;
+				}
+				if ((*i).object->GetPhysicsObject()->IsSleeping() && (*j).object->GetPhysicsObject()->IsSleeping()) { // if both objects are sleeping, they will never interact
+					continue;
+				}
 				info.a = std::min((*i).object, (*j).object);
 				info.b = std::max((*i).object, (*j).object);
 				broadphaseCollisions.insert(info);
@@ -439,6 +447,7 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 			object->IncrementStationaryFrames();
 			if (object->GetStationaryFrameCount() == SLEEP_FRAME_THRESHOLD) {
 				object->SetToSleep(true);
+				//(*i)->GetRenderObject()->SetColour(Vector4(0, 0, 1, 0.5));
 			}
 		}
 

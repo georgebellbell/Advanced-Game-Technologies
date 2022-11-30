@@ -461,10 +461,13 @@ bool CollisionDetection::SweptAABBSphereCollision(const AABBVolume& volumeA, con
 	return false;
 }
 
-
-
 bool  CollisionDetection::OBBSphereIntersection(const OBBVolume& volumeA, const Transform& worldTransformA,
 	const SphereVolume& volumeB, const Transform& worldTransformB, CollisionInfo& collisionInfo) {
+	Quaternion OBBorientation = worldTransformA.GetOrientation();
+	Vector3 OBBposition = worldTransformA.GetPosition();
+
+	Matrix3 transform = Matrix3(OBBorientation);
+	Matrix3 invTransform = Matrix3(OBBorientation.Conjugate());
 	return false;
 }
 
@@ -486,6 +489,8 @@ bool CollisionDetection::AABBCapsuleIntersection(
 	Vector3 centerToTop = topSpherePos - capsulePos;
 	Vector3 AABBToCenter = capsulePos - boxPos;
 
+	Vector3 normal = Vector3::Cross(centerToTop, AABBToCenter);
+
 
 	Vector3 intersection = boxPos;
 
@@ -494,18 +499,20 @@ bool CollisionDetection::AABBCapsuleIntersection(
 	if (Vector3::Dot(intersection - topSpherePos, -centerToTop) < 0) { // above cylinder
 		delta = topSpherePos - boxPos;
 	}
-	else if (Vector3::Dot(intersection - bottomSpherePos, centerToTop) < 0) {
+	else if (Vector3::Dot(intersection - bottomSpherePos, centerToTop) < 0) { // below cylinder
 		delta = bottomSpherePos - boxPos;
 	}
-	else {
+	else { //somehwere in the middle
 		Vector3 middleSpherePos = capsulePos + capsuleUp * (Vector3::Dot(intersection - capsulePos, capsuleUp));
 		delta = middleSpherePos - boxPos;
 	}
 
 	Vector3 closestPointOnBox = Maths::Clamp(delta, -boxSize, boxSize);
 	localPoint = delta - closestPointOnBox;
-
+	
+	//distance = std::max(localPoint.Length(), volumeA.GetHalfHeight());
 	distance = localPoint.Length();
+	
 
 	if (distance < capsuleRadius) {
 		Vector3 collisionNormal = localPoint.Normalised();
