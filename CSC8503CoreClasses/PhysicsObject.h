@@ -11,7 +11,9 @@ namespace NCL {
 		public:
 			PhysicsObject(Transform* parentTransform, const CollisionVolume* parentVolume);
 			~PhysicsObject();
-
+			void SetAngularVelocity(const Vector3& v) {
+				angularVelocity = v;
+			}
 			Vector3 GetLinearVelocity() const {
 				return linearVelocity;
 			}
@@ -52,9 +54,7 @@ namespace NCL {
 				linearVelocity = v;
 			}
 
-			void SetAngularVelocity(const Vector3& v) {
-				angularVelocity = v;
-			}
+
 
 			float Elasticity() {
 				return elasticity;

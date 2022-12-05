@@ -10,7 +10,7 @@ namespace NCL {
 			State(StateUpdateFunction someFunc) {
 				func		= someFunc;
 			}
-			void Update(float dt)  {
+			virtual void Update(float dt)  {
 				if (func != nullptr) {
 					func(dt);
 				}

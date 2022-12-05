@@ -4,7 +4,7 @@
 #include "GameTechVulkanRenderer.h"
 #endif
 #include "PhysicsSystem.h"
-
+#include "Human.h"
 #include "StateGameObject.h"
 
 namespace NCL {
@@ -51,6 +51,11 @@ namespace NCL {
 			GameObject* AddPlayerToWorld(const Vector3& position);
 			GameObject* AddEnemyToWorld(const Vector3& position);
 			GameObject* AddBonusToWorld(const Vector3& position);
+
+			Human* AddHumanToWorld(const Vector3& position);
+
+			StateGameObject* AddStateObjectToWorld(const Vector3& position);
+			StateGameObject* testStateObject;
 
 #ifdef USEVULKAN
 			GameTechVulkanRenderer*	renderer;

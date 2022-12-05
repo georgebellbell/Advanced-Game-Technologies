@@ -387,7 +387,10 @@ void PhysicsSystem::IntegrateAccel(float dt) {
 		object->SetLinearVelocity(linearVel);
 
 		//Angular Stuff
+
 		Vector3 torque = object->GetTorque();
+
+
 		Vector3 angVel = object->GetAngularVelocity();
 
 		object->UpdateInertiaTensor();
@@ -396,7 +399,6 @@ void PhysicsSystem::IntegrateAccel(float dt) {
 
 		angVel += angAccel * dt;
 		object->SetAngularVelocity(angVel);
-
 	}
 }
 
@@ -447,7 +449,6 @@ void PhysicsSystem::IntegrateVelocity(float dt) {
 			object->IncrementStationaryFrames();
 			if (object->GetStationaryFrameCount() == SLEEP_FRAME_THRESHOLD) {
 				object->SetToSleep(true);
-				//(*i)->GetRenderObject()->SetColour(Vector4(0, 0, 1, 0.5));
 			}
 		}
 

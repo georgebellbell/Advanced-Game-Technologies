@@ -9,6 +9,8 @@ set(Header_Files
     "NetworkPlayer.h"
     "StateGameObject.h"
     "TutorialGame.h"
+    "Human.h"
+    "HierarchalStateMachine.h"
 )
 source_group("Header Files" FILES ${Header_Files})
 
@@ -19,6 +21,8 @@ set(Source_Files
     "NetworkPlayer.cpp"
     "StateGameObject.cpp"
     "TutorialGame.cpp"
+    "Human.cpp"
+    "HierarchalStateMachine.cpp"
 )
 
 if(USE_VULKAN)

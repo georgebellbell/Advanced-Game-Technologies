@@ -2,8 +2,7 @@
 #include "GameWorld.h"
 #include "PhysicsObject.h"
 #include "RenderObject.h"
-#include "TextureLoader.h"
-
+#include "TextureLoader.h" 
 #include "PositionConstraint.h"
 #include "OrientationConstraint.h"
 #include "StateGameObject.h"
@@ -88,6 +87,10 @@ void TutorialGame::UpdateGame(float dt) {
 	}
 
 	UpdateKeys();
+
+	if (testStateObject) {
+		testStateObject->Update(dt);
+	}
 
 	if (useGravity) {
 		Debug::Print("(G)ravity on", Vector2(5, 95), Debug::RED);
@@ -262,6 +265,8 @@ void TutorialGame::InitWorld() {
 
 	InitGameExamples();
 	InitDefaultFloor();
+
+	//testStateObject = AddStateObjectToWorld(Vector3(0, 10, 0));
 }
 
 /*
@@ -359,6 +364,7 @@ GameObject* TutorialGame::AddPlayerToWorld(const Vector3& position) {
 		.SetScale(Vector3(meshSize, meshSize, meshSize))
 		.SetPosition(position);
 
+
 	character->SetRenderObject(new RenderObject(&character->GetTransform(), capsuleMesh, nullptr, basicShader));
 	character->SetPhysicsObject(new PhysicsObject(&character->GetTransform(), character->GetBoundingVolume()));
 
@@ -387,7 +393,7 @@ GameObject* TutorialGame::AddEnemyToWorld(const Vector3& position) {
 	character->SetPhysicsObject(new PhysicsObject(&character->GetTransform(), character->GetBoundingVolume()));
 
 	character->GetPhysicsObject()->SetInverseMass(inverseMass);
-	character->GetPhysicsObject()->InitSphereInertia();
+	character->GetPhysicsObject()->InitCubeInertia();
 
 	world->AddGameObject(character);
 
@@ -404,6 +410,42 @@ GameObject* TutorialGame::AddBonusToWorld(const Vector3& position) {
 		.SetPosition(position);
 
 	apple->SetRenderObject(new RenderObject(&apple->GetTransform(), bonusMesh, nullptr, basicShader));
+	apple->SetPhysicsObject(new PhysicsObject(&apple->GetTransform(), apple->GetBoundingVolume()));
+
+	apple->GetPhysicsObject()->SetInverseMass(1.0f);
+	apple->GetPhysicsObject()->InitSphereInertia();
+
+	world->AddGameObject(apple);
+
+	return apple;
+}
+
+Human* TutorialGame::AddHumanToWorld(const Vector3& position)
+{
+	Human* human = new Human(position);
+	human->SetRenderObject(new RenderObject(&human->GetTransform(), enemyMesh, nullptr, basicShader));
+
+	world->AddGameObject(human);
+	
+	float meshSize = 1.0f;
+	float inverseMass = 0.5f;
+
+
+
+	return human;
+}
+
+StateGameObject* TutorialGame::AddStateObjectToWorld(const Vector3& position)
+{
+	StateGameObject* apple = new StateGameObject();
+
+	SphereVolume* volume = new SphereVolume(0.5f);
+	apple->SetBoundingVolume((CollisionVolume*)volume);
+	apple->GetTransform()
+		.SetScale(Vector3(3, 3, 3))
+		.SetPosition(position);
+
+	apple->SetRenderObject(new RenderObject(&apple->GetTransform(), enemyMesh, nullptr, basicShader));
 	apple->SetPhysicsObject(new PhysicsObject(&apple->GetTransform(), apple->GetBoundingVolume()));
 
 	apple->GetPhysicsObject()->SetInverseMass(1.0f);
@@ -459,10 +501,12 @@ void TutorialGame::BridgeConstraintTest() {
 }
 
 void TutorialGame::InitGameExamples() {
-	AddPlayerToWorld(Vector3(0, 5, 0));
+	
 	AddEnemyToWorld(Vector3(5, 5, 0));
 	AddBonusToWorld(Vector3(10, 5, 0));
+	AddHumanToWorld(Vector3(10, 0, 10))->SetTarget(AddPlayerToWorld(Vector3(100, 0, 100)));
 	BridgeConstraintTest();
+
 }
 
 void TutorialGame::InitSphereGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, float radius) {

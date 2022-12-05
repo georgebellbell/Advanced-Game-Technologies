@@ -3,8 +3,10 @@
 #include "CollisionVolume.h"
 #include "../Build/CSC8503CoreClasses/CollisionLayerMatrix.h"
 
+#include <string>
 
 using std::vector;
+using std::string;
 
 namespace NCL::CSC8503 {
 	class NetworkObject;
@@ -17,6 +19,8 @@ namespace NCL::CSC8503 {
 					Layers objectLayer = defaultLayer, 
 					LayerMasks = defaultLayerMask);
 		~GameObject();
+
+		virtual void Update(float dt){}
 
 		void SetBoundingVolume(CollisionVolume* vol) {
 			boundingVolume = vol;

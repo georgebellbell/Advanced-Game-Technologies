@@ -23,9 +23,9 @@ NavigationGrid::NavigationGrid()	{
 
 NavigationGrid::NavigationGrid(const std::string&filename) : NavigationGrid() {
 
-	std::ofstream f(Assets::DATADIR + filename);
+	/*std::ofstream f(Assets::DATADIR + filename);
 	f << "hello!" << std::endl;
-	f.close();
+	f.close();*/
 
 
 

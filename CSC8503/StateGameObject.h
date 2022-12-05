@@ -4,6 +4,7 @@
 namespace NCL {
     namespace CSC8503 {
         class StateMachine;
+        class HierarchalStateMachine;
         class StateGameObject : public GameObject  {
         public:
             StateGameObject();
