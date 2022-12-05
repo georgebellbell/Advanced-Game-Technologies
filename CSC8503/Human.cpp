@@ -60,7 +60,6 @@ Human::Human(const Vector3& position)
 		[&]()->bool
 		{
 			float distance = (target->GetTransform().GetPosition() - transform.GetPosition()).Length();
-			std::cout << distance << "\n";
 			return distance < 10.0f;
 		}
 	));
