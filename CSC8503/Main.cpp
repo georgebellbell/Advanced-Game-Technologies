@@ -225,20 +225,156 @@ void TestBehaviourTree() {
 	std::cout << "All done!\n";
 }
 
+class PauseScreen : public PushdownState {
+	PushdownResult OnUpdate(float dt,
+		PushdownState** newState) override {
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::U)) {
+			return PushdownResult::Pop;
+		}
+		return PushdownResult::NoChange;
+	};
+	void OnAwake() override {
+		std::cout << "Press U to unpause the game\n";
+	}
+};
+class GameScreen : public PushdownState {
+	PushdownResult OnUpdate(float dt,
+		PushdownState** newState) override {
+		pauseReminder -= dt;
+		if (pauseReminder < 0) {
+			std::cout << "Coins mined: " << coinsMined << "\n";
+			std::cout << "Press P to pause game, or F1 to return to main menu!\n";
+			pauseReminder += 1.0f;
+		}
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::P)) {
+			*newState = new PauseScreen();
+			return PushdownResult::Push;
+		}
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F1)) {
+			std::cout << "Returning to main menu\n";
+			return PushdownResult::Pop;
+		}
+		if (rand() % 7 == 0) {
+			coinsMined++;
+		}
+		return PushdownResult::NoChange;
+	};
+	void OnAwake() override {
+		std::cout << "Preparing to mine coins\n";
+	}
+protected:
+	int coinsMined = 0;
+	float pauseReminder = 1;
+};
+
+class IntroScreen : public PushdownState {
+	PushdownResult OnUpdate(float dt,
+		PushdownState** newState) override {
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::SPACE)) {
+			*newState = new GameScreen();
+			return PushdownResult::Push;
+		}
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::ESCAPE)) {
+			return PushdownResult::Pop;
+		}
+		return PushdownResult::NoChange;
+	};
+	void OnAwake() override {
+		std::cout << "welcome to a cool game\n";
+		std::cout << "Space to begin, escape to quit\n";
+	}
+};
+
+void TestPushdownAutomata(Window* w) {
+	PushdownMachine machine(new IntroScreen());
+	while (w->UpdateWindow()) {
+		float dt = w->GetTimer()->GetTimeDeltaSeconds();
+		if (!machine.Update(dt)) {
+			return;
+		}
+	}
+}
+
+class TestPacketReceiver : public PacketReceiver {
+public:
+	TestPacketReceiver(string name) {
+		this->name = name;
+	}
+
+	void ReceivePacket(int type, GamePacket* payload, int source) {
+		if (type == String_Message) {
+			StringPacket* realPacket = (StringPacket*)payload;
+
+			string msg = realPacket->GetStringFromData();
+
+			std::cout << name << " received message: " << msg << std::endl;
+		}
+	}
+protected:
+	string name;
+};
+
+void TestNetworking() {
+	NetworkBase::Initialise();
+
+	TestPacketReceiver serverReceiver("Server");
+	TestPacketReceiver clientReceiver1("Client 1");
+	TestPacketReceiver clientReceiver2("Client 2");
+
+	int port = NetworkBase::GetDefaultPort();
+
+	GameServer* server = new GameServer(port, 2);
+	GameClient* client1 = new GameClient();
+	GameClient* client2 = new GameClient();
+
+	server->RegisterPacketHandler(String_Message, &serverReceiver);
+	client1->RegisterPacketHandler(String_Message, &clientReceiver1);
+	client2->RegisterPacketHandler(String_Message, &clientReceiver2);
+
+
+	bool canConnect = client1->Connect(127, 0, 0, 1, port);
+	canConnect = client2->Connect(127, 0, 0, 1, port);
+
+	for (int i = 0; i < 100; i++)
+	{
+		StringPacket p = StringPacket("Server says hello! " + std::to_string(i));
+		server->SendGlobalPacket(p);
+
+		p = StringPacket("Client 1 says hello! " + std::to_string(i));
+		client1->SendPacket(p);
+
+		server->UpdateServer();
+		client1->UpdateClient();
+
+		p = StringPacket("Client 2 says hello! " + std::to_string(i));
+		client2->SendPacket(p);
+
+		server->UpdateServer();
+		client2->UpdateClient();
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+
+	NetworkBase::Destroy();
+}
+
+
 int main() {
 	
-	TestBehaviourTree();
-	return 0;
+	//TestNetworking();
+	//return 0;
 	Window*w = Window::CreateGameWindow("CSC8503 Game technology!", 1280, 720);
-
 	if (!w->HasInitialised()) {
 		return -1;
 	}	
+	//TestPushdownAutomata(w);
 
 	w->ShowOSPointer(false);
 	w->LockMouseToWindow(true);
 
-	TutorialGame* g = new TutorialGame();
+	//TutorialGame* g = new TutorialGame();
+
+	NetworkedGame* g = new NetworkedGame();
 	w->GetTimer()->GetTimeDeltaSeconds(); //Clear the timer so we don't get a larget first dt!
 	while (w->UpdateWindow() && !Window::GetKeyboard()->KeyDown(KeyboardKeys::ESCAPE)) {
 		//TestPathfinding();

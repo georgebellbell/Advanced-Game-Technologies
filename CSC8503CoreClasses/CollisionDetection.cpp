@@ -520,7 +520,6 @@ bool CollisionDetection::AABBCapsuleIntersection(
 
 	if (distance < capsuleRadius) {
 		Vector3 collisionNormal = localPoint.Normalised();
-		//Debug::DrawLine(capsulePos, capsulePos + collisionNormal * 10, Debug::CYAN, 20.0f);
 
 		float penetration = (capsuleRadius - distance);
 		Vector3 localA = Vector3();

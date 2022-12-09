@@ -16,8 +16,8 @@ using namespace CSC8503;
 const float SLEEP_THRESHOLD = 0.0005f;
 const int SLEEP_FRAME_THRESHOLD = 100;
 PhysicsSystem::PhysicsSystem(GameWorld& g) : gameWorld(g)	{
-	applyGravity	= false;
-	useBroadPhase	= false;	
+	applyGravity	= true;
+	useBroadPhase	= true;	
 	dTOffset		= 0.0f;
 	globalDamping	= 0.995f;
 	linearDamping	= 0.4f;
@@ -215,6 +215,9 @@ void PhysicsSystem::BasicCollisionDetection() {
 			if ((*i)->GetPhysicsObject()->IsSleeping() && (*j)->GetPhysicsObject()->IsSleeping()) { // if both objects are sleeping, they will never interact
 				continue;
 			}
+			if ((*i)->GetPhysicsObject()->GetInverseMass() == 0 && (*j)->GetPhysicsObject()->GetInverseMass() == 0) { 
+				continue;
+			}
 			
 			CollisionDetection::CollisionInfo info;
 			if (CollisionDetection::ObjectIntersection(*i, *j, info)) {
@@ -222,8 +225,13 @@ void PhysicsSystem::BasicCollisionDetection() {
 				(*i)->GetPhysicsObject()->SetToSleep(false);
 				(*j)->GetPhysicsObject()->SetToSleep(false);
 
-				if (!(*i)->GetBoundingVolume()->IsTrigger() && !(*i)->GetBoundingVolume()->IsTrigger()) {
+
+
+				if (!(*i)->GetBoundingVolume()->IsTrigger() && !(*j)->GetBoundingVolume()->IsTrigger()) {
 					ImpulseResolveCollision(*info.a, *info.b, info.point);
+				}
+				else {
+					std::cout << "Collision between " << (*i)->GetName() << " and " << (*j)->GetName() << std::endl;
 				}
 				
 				info.framesLeft = numCollisionFrames;
@@ -326,6 +334,10 @@ void PhysicsSystem::BroadPhase() {
 				if ((*i).object->GetPhysicsObject()->IsSleeping() && (*j).object->GetPhysicsObject()->IsSleeping()) { // if both objects are sleeping, they will never interact
 					continue;
 				}
+
+				if ((*i).object->GetPhysicsObject()->GetInverseMass() == 0 && (*j).object->GetPhysicsObject()->GetInverseMass() == 0) {
+					continue;
+				}
 				info.a = std::min((*i).object, (*j).object);
 				info.b = std::max((*i).object, (*j).object);
 				broadphaseCollisions.insert(info);
@@ -344,8 +356,17 @@ void PhysicsSystem::NarrowPhase() {
 		i = broadphaseCollisions.begin(); i != broadphaseCollisions.end(); ++i) {
 		CollisionDetection::CollisionInfo info = *i;
 		if (CollisionDetection::ObjectIntersection(info.a, info.b, info)) {
+			info.a->GetPhysicsObject()->SetToSleep(false);
+			info.b->GetPhysicsObject()->SetToSleep(false);
+
+			if (!info.a->GetBoundingVolume()->IsTrigger() && !info.b->GetBoundingVolume()->IsTrigger()) {
+				ImpulseResolveCollision(*info.a, *info.b, info.point);
+			}
+			else {
+				std::cout << "Trigger collision between " << info.a->GetName() << " and " << info.b->GetName() << std::endl;
+			}
+
 			info.framesLeft = numCollisionFrames;
-			ImpulseResolveCollision(*info.a, *info.b, info.point);
 			allCollisions.insert(info);
 		}
 	}

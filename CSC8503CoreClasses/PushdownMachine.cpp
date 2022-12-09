@@ -46,3 +46,15 @@ bool PushdownMachine::Update(float dt) {
 	}
 	return true;
 }
+
+void PushdownMachine::Reset()
+{
+	if (stateStack.empty()) return;
+	
+	while (stateStack.size() > 0) {
+		stateStack.pop();
+	}
+
+	stateStack.push(initialState);
+	delete activeState;
+}

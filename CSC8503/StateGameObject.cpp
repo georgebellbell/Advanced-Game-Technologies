@@ -40,7 +40,6 @@ StateGameObject::StateGameObject() {
 	}
 	));
 
-
 }
 
 StateGameObject::~StateGameObject() {

@@ -13,6 +13,8 @@ const int BOTTOM_NODE	= 3;
 
 const char WALL_NODE	= 'x';
 const char FLOOR_NODE	= '.';
+const char POWERUP_NODE	= 'p';
+const char DESTRUCTABLE_NODE = 'd';
 
 NavigationGrid::NavigationGrid()	{
 	nodeSize	= 0;
@@ -43,14 +45,19 @@ NavigationGrid::NavigationGrid(const std::string&filename) : NavigationGrid() {
 			char type = 0;
 			infile >> type;
 			n.type = type;
-			n.position = Vector3((float)(x * nodeSize), 0, (float)(y * nodeSize));
+			n.position = Vector3((float)(x * nodeSize), -10, (float)(y * nodeSize));
 		}
 	}
 	
+	BuildNodeConnections();
+
+}
+
+void NavigationGrid::BuildNodeConnections() {
 	//now to build the connectivity between the nodes
 	for (int y = 0; y < gridHeight; ++y) {
 		for (int x = 0; x < gridWidth; ++x) {
-			GridNode&n = allNodes[(gridWidth * y) + x];		
+			GridNode& n = allNodes[(gridWidth * y) + x];
 
 			if (y > 0) { //get the above node
 				n.connected[0] = &allNodes[(gridWidth * (y - 1)) + x];
@@ -66,15 +73,22 @@ NavigationGrid::NavigationGrid(const std::string&filename) : NavigationGrid() {
 			}
 			for (int i = 0; i < 4; ++i) {
 				if (n.connected[i]) {
-					if (n.connected[i]->type == '.') {
-						n.costs[i]		= 1;
-					}
-					if (n.connected[i]->type == 'x') {
+					switch (n.connected[i]->type) {
+					case '.':
+					case 'p':
+						n.costs[i] = 1;
+						break;
+					case 'd':
+						n.costs[i] = 3;
+						break;
+					case 'x':
 						n.connected[i] = nullptr; //actually a wall, disconnect!
+						break;
 					}
+	
 				}
 			}
-		}	
+		}
 	}
 }
 

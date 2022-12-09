@@ -6,7 +6,10 @@
 #include "PositionConstraint.h"
 #include "OrientationConstraint.h"
 #include "StateGameObject.h"
+#include "Player.h"
 
+#include "NavigationGrid.h"
+#include "NavigationMesh.h"
 
 
 using namespace NCL;
@@ -43,12 +46,15 @@ void TutorialGame::InitialiseAssets() {
 	enemyMesh	= renderer->LoadMesh("Keeper.msh");
 	bonusMesh	= renderer->LoadMesh("apple.msh");
 	capsuleMesh = renderer->LoadMesh("capsule.msh");
+	cylinderMesh = renderer->LoadMesh("cylinder.msh");
+
 
 	basicTex	= renderer->LoadTexture("checkerboard.png");
 	basicShader = renderer->LoadShader("scene.vert", "scene.frag");
 
 	InitCamera();
-	InitWorld();
+	//InitWorld();
+	InitWorld2();
 }
 
 TutorialGame::~TutorialGame()	{
@@ -57,6 +63,7 @@ TutorialGame::~TutorialGame()	{
 	delete charMesh;
 	delete enemyMesh;
 	delete bonusMesh;
+	delete cylinderMesh;
 
 	delete basicTex;
 	delete basicShader;
@@ -67,12 +74,13 @@ TutorialGame::~TutorialGame()	{
 }
 
 void TutorialGame::UpdateGame(float dt) {
-	if (!inSelectionMode) {
+	if (inSelectionMode) {
 		world->GetMainCamera()->UpdateCamera(dt);
 	}
-	if (lockedObject != nullptr) {
+	if (lockedObject != nullptr && !inSelectionMode) {
 		Vector3 objPos = lockedObject->GetTransform().GetPosition();
-		Vector3 camPos = objPos + lockedOffset;
+		Vector3 camPos = objPos + lockedObject->GetTransform().GetOrientation() * lockedOffset;
+		world->GetMainCamera()->SetPosition(camPos);
 
 		Matrix4 temp = Matrix4::BuildViewMatrix(camPos, objPos, Vector3(0,1,0));
 
@@ -81,7 +89,7 @@ void TutorialGame::UpdateGame(float dt) {
 		Quaternion q(modelMat);
 		Vector3 angles = q.ToEuler(); //nearly there now!
 
-		world->GetMainCamera()->SetPosition(camPos);
+
 		world->GetMainCamera()->SetPitch(angles.x);
 		world->GetMainCamera()->SetYaw(angles.y);
 	}
@@ -120,12 +128,36 @@ void TutorialGame::UpdateGame(float dt) {
 		}
 	}
 
-	//Debug::DrawLine(Vector3(), Vector3(0, 100, 0), Vector4(1, 0, 0, 1));
-
 	SelectObject();
 	MoveSelectedObject();
 
+	//Check destructables
+	for (DestructableObject* i : destructableObjects)
+	{
+		if (i->Destroyed()) {
+			GridNode* allNodes = worldGrid->AllNodes(); 
+			allNodes[i->nodeReference].type = '.';
+			worldGrid->BuildNodeConnections(); // rebuild node connections
+
+			destructableObjects.erase(std::remove(destructableObjects.begin(), 
+				destructableObjects.end(), i), destructableObjects.end());
+			world->RemoveGameObject(i);
+		}
+	}
+	for (Powerup* i : powerupObjects)
+	{
+		if (i->Collected()) {
+			powerupObjects.erase(std::remove(powerupObjects.begin(),
+				powerupObjects.end(), i), powerupObjects.end());
+			world->RemoveGameObject(i);
+		}
+	}
+
+	Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
+
+
 	world->UpdateWorld(dt);
+	renderer->Update(dt);
 	renderer->Update(dt);
 	physics->Update(dt);
 
@@ -135,7 +167,7 @@ void TutorialGame::UpdateGame(float dt) {
 
 void TutorialGame::UpdateKeys() {
 	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F1)) {
-		InitWorld(); //We can reset the simulation at any time with F1
+		InitWorld2(); //We can reset the simulation at any time with F1
 		selectionObject = nullptr;
 	}
 
@@ -144,34 +176,27 @@ void TutorialGame::UpdateKeys() {
 	}
 
 	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::G)) {
-		useGravity = !useGravity; //Toggle gravity!
-		physics->UseGravity(useGravity);
+		ToggleGravity();
 
-		std::vector<GameObject*>::const_iterator first, last;
-		world->GetObjectIterators(first, last);
-
-		for (auto i = first; i != last; i++)
-		{
-			(*i)->GetPhysicsObject()->SetToSleep(false);
+	}
+	{
+		//Running certain physics updates in a consistent order might cause some
+		//bias in the calculations - the same objects might keep 'winning' the constraint
+		//allowing the other one to stretch too much etc. Shuffling the order so that it
+		//is random every frame can help reduce such bias.
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F9)) {
+			world->ShuffleConstraints(true);
+		}
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F10)) {
+			world->ShuffleConstraints(false);
 		}
 
-	}
-	//Running certain physics updates in a consistent order might cause some
-	//bias in the calculations - the same objects might keep 'winning' the constraint
-	//allowing the other one to stretch too much etc. Shuffling the order so that it
-	//is random every frame can help reduce such bias.
-	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F9)) {
-		world->ShuffleConstraints(true);
-	}
-	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F10)) {
-		world->ShuffleConstraints(false);
-	}
-
-	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F7)) {
-		world->ShuffleObjects(true);
-	}
-	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F8)) {
-		world->ShuffleObjects(false);
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F7)) {
+			world->ShuffleObjects(true);
+		}
+		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F8)) {
+			world->ShuffleObjects(false);
+		}
 	}
 
 	if (lockedObject) {
@@ -182,32 +207,69 @@ void TutorialGame::UpdateKeys() {
 	}
 }
 
+void TutorialGame::ToggleGravity()
+{
+	useGravity = !useGravity; //Toggle gravity!
+	physics->UseGravity(useGravity);
+
+	std::vector<GameObject*>::const_iterator first, last;
+	world->GetObjectIterators(first, last);
+
+	for (auto i = first; i != last; i++)
+	{
+		(*i)->GetPhysicsObject()->SetToSleep(false);
+	}
+}
+
 void TutorialGame::LockedObjectMovement() {
+	float movementSpeed = lockedObject->MovementSpeed();
+	float jumpPower = lockedObject->JumpPower();
+	float rotationSpeed = lockedObject->RotationSpeed();
+	float yaw = (Window::GetMouse()->GetRelativePosition().x);
+	
+	Vector3 rotation(0.0f, -yaw, 0.0f);
+	lockedObject->GetPhysicsObject()->AddTorque(rotation * rotationSpeed);
+
+	float pitch = (Window::GetMouse()->GetRelativePosition().y);
+
+	lockedOffset.y = max(1.0f, min(lockedOffset.y + (pitch * rotationSpeed), 10.0f));
+
+	
 	Matrix4 view		= world->GetMainCamera()->BuildViewMatrix();
 	Matrix4 camWorld	= view.Inverse();
-
+	
 	Vector3 rightAxis = Vector3(camWorld.GetColumn(0)); //view is inverse of model!
-
-	//forward is more tricky -  camera forward is 'into' the screen...
-	//so we can take a guess, and use the cross of straight up, and
-	//the right axis, to hopefully get a vector that's good enough!
 
 	Vector3 fwdAxis = Vector3::Cross(Vector3(0, 1, 0), rightAxis);
 	fwdAxis.y = 0.0f;
 	fwdAxis.Normalise();
 
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::UP)) {
-		selectionObject->GetPhysicsObject()->AddForce(fwdAxis);
+	
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
+		lockedObject->GetPhysicsObject()->AddForce(fwdAxis * movementSpeed);
 	}
 
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::DOWN)) {
-		selectionObject->GetPhysicsObject()->AddForce(-fwdAxis);
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
+		lockedObject->GetPhysicsObject()->AddForce(-fwdAxis * movementSpeed);
 	}
 
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::NEXT)) {
-		selectionObject->GetPhysicsObject()->AddForce(Vector3(0,-10,0));
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
+		lockedObject->GetPhysicsObject()->AddForce(rightAxis * movementSpeed);
 	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
+		lockedObject->GetPhysicsObject()->AddForce(-rightAxis * movementSpeed);
+	}
+
+	Player* player = (Player*)lockedObject;
+
+	if (!player->Jumping()) {
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
+			lockedObject->GetPhysicsObject()->AddForce(Vector3(0, 10, 0) * jumpPower);
+			player->IsJumping(true);
+		}
+	}
+	
 }
 
 void TutorialGame::DebugObjectMovement() {
@@ -269,6 +331,60 @@ void TutorialGame::InitWorld() {
 	//testStateObject = AddStateObjectToWorld(Vector3(0, 10, 0));
 }
 
+void TutorialGame::InitWorld2() {
+	world->ClearAndErase();
+	physics->Clear();
+	destructableObjects.clear();
+	powerupObjects.clear();
+
+	player = AddPlayerToWorld(Vector3(100, 0, 100));
+
+	LockCameraToObject(player);
+
+	
+	worldGrid = new NavigationGrid("TestGrid2.txt");
+	GridNode* allNodes = worldGrid->AllNodes();
+	int gridWidth = worldGrid->GridWidth();
+	int gridHeight = worldGrid->GridHeight();
+	for (int y = 0; y < gridHeight; ++y) {
+		for (int x = 0; x < gridWidth; ++x) {
+			GridNode& n = allNodes[(gridWidth * y) + x];
+			Vector3 nodePosition = n.position;
+			GameObject* object;
+			switch (n.type) {
+			case '.':
+				//clear area!
+				break;
+			case 'x':
+				//wall
+				object = AddCubeToWorld(Vector3(nodePosition.x, nodePosition.y + 10, nodePosition.z),
+							   Vector3(5, 10, 5), 0.0f);
+				object->GetRenderObject()->SetColour(Vector4(0.57, 0.64, 0.69, 1.0f));
+				break;
+			case 'p':
+				AddRandomPowerupToWorld(Vector3(nodePosition.x, nodePosition.y + 5, nodePosition.z));
+				break;
+			case 'd':
+				AddCrateToWorld(Vector3(nodePosition.x, nodePosition.y + 5, nodePosition.z), (gridWidth * y) + x);
+				break;
+			}
+		}
+	}
+	AddBridgeToWorld();
+
+
+	InitGameFloor();
+}
+
+Bin* TutorialGame::AddBinToWorld(const Vector3& position)
+{
+	Bin* bin = new Bin(position);
+	bin->SetRenderObject(new RenderObject(&bin->GetTransform(), cubeMesh, basicTex, basicShader));
+	bin->GetRenderObject()->SetColour(Vector4(0.5, 0.5, 0.5, 1));
+	world->AddGameObject(bin);
+	return bin;
+}
+
 /*
 
 A single function to add a large immoveable cube to the bottom of our world
@@ -276,8 +392,9 @@ A single function to add a large immoveable cube to the bottom of our world
 */
 GameObject* TutorialGame::AddFloorToWorld(const Vector3& position) {
 	GameObject* floor = new GameObject("floor");
-
-	Vector3 floorSize = Vector3(200, 2, 200);
+	int nodeSize = worldGrid->NodeSize();
+	Vector3 floorSize = Vector3(worldGrid->GridWidth() * nodeSize / 2
+		, 2, worldGrid->GridHeight() * nodeSize / 2);
 	AABBVolume* volume = new AABBVolume(floorSize);
 	floor->SetBoundingVolume((CollisionVolume*)volume);
 	floor->GetTransform()
@@ -303,7 +420,7 @@ physics worlds. You'll probably need another function for the creation of OBB cu
 
 */
 GameObject* TutorialGame::AddSphereToWorld(const Vector3& position, float radius, float inverseMass, bool hollow) {
-	GameObject* sphere = new GameObject("sphere", spheres, sphereLayerMask);
+	GameObject* sphere = new GameObject("sphere");
 
 	Vector3 sphereSize = Vector3(radius, radius, radius);
 	SphereVolume* volume = new SphereVolume(radius);
@@ -331,7 +448,7 @@ GameObject* TutorialGame::AddSphereToWorld(const Vector3& position, float radius
 }
 
 GameObject* TutorialGame::AddCubeToWorld(const Vector3& position, Vector3 dimensions, float inverseMass) {
-	GameObject* cube = new GameObject("cube", cubes, cubeLayerMask);
+	GameObject* cube = new GameObject("cube");
 
 	AABBVolume* volume = new AABBVolume(dimensions);
 	cube->SetBoundingVolume((CollisionVolume*)volume);
@@ -340,7 +457,7 @@ GameObject* TutorialGame::AddCubeToWorld(const Vector3& position, Vector3 dimens
 		.SetPosition(position)
 		.SetScale(dimensions * 2);
 
-	cube->SetRenderObject(new RenderObject(&cube->GetTransform(), cubeMesh, basicTex, basicShader));
+	cube->SetRenderObject(new RenderObject(&cube->GetTransform(), cubeMesh, nullptr, basicShader));
 	cube->SetPhysicsObject(new PhysicsObject(&cube->GetTransform(), cube->GetBoundingVolume()));
 
 	cube->GetPhysicsObject()->SetInverseMass(inverseMass);
@@ -351,29 +468,13 @@ GameObject* TutorialGame::AddCubeToWorld(const Vector3& position, Vector3 dimens
 	return cube;
 }
 
-GameObject* TutorialGame::AddPlayerToWorld(const Vector3& position) {
-	float meshSize		= 1.0f;
-	float inverseMass	= 0.5f;
+Player* TutorialGame::AddPlayerToWorld(const Vector3& position) {
+	Player* player = new Player(position);
+	player->SetRenderObject(new RenderObject(&player->GetTransform(), charMesh, nullptr, basicShader));
+	player->GetRenderObject()->SetColour(player->defaultColour);
 
-	GameObject* character = new GameObject("character");
-	CapsuleVolume* volume  = new CapsuleVolume(1.0f, 0.5f);
-
-	character->SetBoundingVolume((CollisionVolume*)volume);
-
-	character->GetTransform()
-		.SetScale(Vector3(meshSize, meshSize, meshSize))
-		.SetPosition(position);
-
-
-	character->SetRenderObject(new RenderObject(&character->GetTransform(), capsuleMesh, nullptr, basicShader));
-	character->SetPhysicsObject(new PhysicsObject(&character->GetTransform(), character->GetBoundingVolume()));
-
-	character->GetPhysicsObject()->SetInverseMass(inverseMass);
-	character->GetPhysicsObject()->InitSphereInertia();
-
-	world->AddGameObject(character);
-
-	return character;
+	world->AddGameObject(player);
+	return player;
 }
 
 GameObject* TutorialGame::AddEnemyToWorld(const Vector3& position) {
@@ -420,6 +521,18 @@ GameObject* TutorialGame::AddBonusToWorld(const Vector3& position) {
 	return apple;
 }
 
+Crate* TutorialGame::AddCrateToWorld(const Vector3& position, int nodeReference)
+{
+	Crate* crate = new Crate(position);
+	crate->SetRenderObject(new RenderObject(&crate->GetTransform(), cubeMesh, nullptr, basicShader));
+	crate->GetRenderObject()->SetColour(Vector4(0.5, 0.35, 0.05, 1));
+	world->AddGameObject(crate);
+	crate->nodeReference = nodeReference;
+
+	destructableObjects.push_back(crate);
+	return crate;
+}
+
 Human* TutorialGame::AddHumanToWorld(const Vector3& position)
 {
 	Human* human = new Human(position);
@@ -427,12 +540,50 @@ Human* TutorialGame::AddHumanToWorld(const Vector3& position)
 
 	world->AddGameObject(human);
 	
-	float meshSize = 1.0f;
-	float inverseMass = 0.5f;
-
-
-
 	return human;
+}
+
+Powerup* TutorialGame::AddRandomPowerupToWorld(const Vector3& position)
+{
+	int random = rand() % 3;
+	Powerup* randomPowerup = nullptr;
+	switch (random) {
+	case 0:
+		randomPowerup = AddPowerupToWorld(position, Speed);
+		break;
+	case 1:
+		randomPowerup = AddPowerupToWorld(position, Jump);
+		break;
+	case 2:
+		randomPowerup = AddPowerupToWorld(position, Invisibility);
+		break;
+	}
+	return randomPowerup;
+
+}
+
+Powerup* TutorialGame::AddPowerupToWorld(const Vector3& position, PowerupType powerupType)
+{
+	Powerup* powerup = new Powerup(position, powerupType);
+	powerup->SetRenderObject(new RenderObject(&powerup->GetTransform(), sphereMesh, basicTex, basicShader));
+
+	switch (powerupType) {
+	case Speed:
+		powerup->GetRenderObject()->SetColour(Vector4(0.0f, 1.0f, 0.0f, 1));
+		break;
+	case Jump:
+		powerup->GetRenderObject()->SetColour(Vector4(0.0f, 0.0f, 1.0, 1));
+		break;
+	case Invisibility:
+		powerup->GetRenderObject()->SetColour(Vector4(1.0f, 1.0f, 1.0f, 0.2f));
+		break;
+
+	}
+	world->AddGameObject(powerup);
+
+	powerupObjects.push_back(powerup);
+
+	return powerup;
 }
 
 StateGameObject* TutorialGame::AddStateObjectToWorld(const Vector3& position)
@@ -459,19 +610,26 @@ StateGameObject* TutorialGame::AddStateObjectToWorld(const Vector3& position)
 void TutorialGame::InitDefaultFloor() {
 	AddFloorToWorld(Vector3(0, -20, 0));
 }
+void TutorialGame::InitGameFloor() {
+	AddFloorToWorld(Vector3(worldGrid->GridWidth() * worldGrid->NodeSize()/ 2, 
+							-10, 
+							(worldGrid->GridHeight() * worldGrid->NodeSize() / 2)));
+}
 
-void TutorialGame::BridgeConstraintTest() {
-	Vector3 cubeSize = Vector3(8, 4, 16);
+void TutorialGame::AddBridgeToWorld() {
+	Vector3 cubeSize = Vector3(4, 1, 8);
 
-	float invCubeMass = 5;
+	float invCubeMass = 10;
 	int numLinks = 10;
-	float maxDistance = 25;
-	float cubeDistance = 20;
+	float maxDistance = 11;
+	float cubeDistance = 10;
 
-	Vector3 startPos = Vector3(0, 300, 0);
+	int gridWidth = worldGrid->GridWidth()* worldGrid->NodeSize();
+	int gridHeight = worldGrid->GridHeight() * worldGrid->NodeSize();
+	Vector3 startPos = Vector3(gridWidth + 10, -10, gridHeight/ 2);
 
 	GameObject* start = AddCubeToWorld(startPos + Vector3(0, 0, 0), cubeSize, 0);
-
+	start->GetRenderObject()->SetColour(Vector4(1, 0, 0, 1));
 	GameObject* end = AddCubeToWorld(startPos + Vector3((numLinks + 2) * cubeDistance, 0, 0), cubeSize, 0);
 
 	GameObject* previous = start;
@@ -505,7 +663,7 @@ void TutorialGame::InitGameExamples() {
 	AddEnemyToWorld(Vector3(5, 5, 0));
 	AddBonusToWorld(Vector3(10, 5, 0));
 	AddHumanToWorld(Vector3(10, 0, 10))->SetTarget(AddPlayerToWorld(Vector3(100, 0, 100)));
-	BridgeConstraintTest();
+	AddBridgeToWorld();
 
 }
 

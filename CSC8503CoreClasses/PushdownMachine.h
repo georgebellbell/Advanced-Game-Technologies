@@ -12,6 +12,8 @@ namespace NCL {
 
 			bool Update(float dt);
 
+			void Reset();
+
 		protected:
 			PushdownState* activeState;
 			PushdownState* initialState;

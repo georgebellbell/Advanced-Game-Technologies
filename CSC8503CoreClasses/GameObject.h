@@ -90,6 +90,20 @@ namespace NCL::CSC8503 {
 			return objectLayerMask;
 		}
 
+		virtual float MovementSpeed() const {
+			return movementSpeed;
+		}
+
+		virtual float JumpPower() const {
+			return jumpPower;
+		}
+
+		virtual float RotationSpeed() const {
+			return rotationSpeed;
+		}
+
+		
+
 	protected:
 		Transform			transform;
 
@@ -107,6 +121,10 @@ namespace NCL::CSC8503 {
 		std::string	name;
 		
 		Vector3 broadphaseAABB;
+
+		float movementSpeed;
+		float jumpPower;
+		float rotationSpeed;
 	};
 }
 

@@ -56,7 +56,7 @@ void NetworkedGame::UpdateGame(float dt) {
 		if (thisServer) {
 			UpdateAsServer(dt);
 		}
-		else if (thisClient) {
+		if (thisClient) {
 			UpdateAsClient(dt);
 		}
 		timeToNextPacket += 1.0f / 20.0f; //20hz server/client update
@@ -81,6 +81,8 @@ void NetworkedGame::UpdateAsServer(float dt) {
 	else {
 		BroadcastSnapshot(true);
 	}
+
+	thisServer->UpdateServer();
 }
 
 void NetworkedGame::UpdateAsClient(float dt) {
@@ -92,6 +94,8 @@ void NetworkedGame::UpdateAsClient(float dt) {
 		newPacket.lastID = 0; //You'll need to work this out somehow...
 	}
 	thisClient->SendPacket(newPacket);
+
+	thisClient->UpdateClient();
 }
 
 void NetworkedGame::BroadcastSnapshot(bool deltaFrame) {
@@ -148,7 +152,7 @@ void NetworkedGame::SpawnPlayer() {
 }
 
 void NetworkedGame::StartLevel() {
-
+	TutorialGame();
 }
 
 void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {

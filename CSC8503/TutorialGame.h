@@ -6,6 +6,12 @@
 #include "PhysicsSystem.h"
 #include "Human.h"
 #include "StateGameObject.h"
+#include "Player.h"
+#include "Bin.h"
+#include "Crate.h"
+#include "Powerup.h"
+#include "NavigationGrid.h"
+#include "NavigationMesh.h"
 
 namespace NCL {
 	namespace CSC8503 {
@@ -22,7 +28,11 @@ namespace NCL {
 			void InitCamera();
 			void UpdateKeys();
 
+			void ToggleGravity();
+
 			void InitWorld();
+			void InitWorld2();
+
 
 			/*
 			These are some of the world/object creation functions I created when testing the functionality
@@ -36,8 +46,9 @@ namespace NCL {
 			void InitCubeGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, const Vector3& cubeDims);
 
 			void InitDefaultFloor();
+			void InitGameFloor();
 
-			void BridgeConstraintTest();
+			void AddBridgeToWorld();
 
 			bool SelectObject();
 			void MoveSelectedObject();
@@ -48,11 +59,16 @@ namespace NCL {
 			GameObject* AddSphereToWorld(const Vector3& position, float radius, float inverseMass = 10.0f, bool hollow = false);
 			GameObject* AddCubeToWorld(const Vector3& position, Vector3 dimensions, float inverseMass = 10.0f);
 
-			GameObject* AddPlayerToWorld(const Vector3& position);
+			Player* AddPlayerToWorld(const Vector3& position);
+
 			GameObject* AddEnemyToWorld(const Vector3& position);
 			GameObject* AddBonusToWorld(const Vector3& position);
 
+			Bin* AddBinToWorld(const Vector3& position);
+			Crate* AddCrateToWorld(const Vector3& position, int nodeReference);
 			Human* AddHumanToWorld(const Vector3& position);
+			Powerup* AddRandomPowerupToWorld(const Vector3& position);
+			Powerup* AddPowerupToWorld(const Vector3& position, PowerupType powerupType);
 
 			StateGameObject* AddStateObjectToWorld(const Vector3& position);
 			StateGameObject* testStateObject;
@@ -83,15 +99,24 @@ namespace NCL {
 			MeshGeometry*	charMesh	= nullptr;
 			MeshGeometry*	enemyMesh	= nullptr;
 			MeshGeometry*	bonusMesh	= nullptr;
+			MeshGeometry* cylinderMesh  = nullptr;
 
 			//Coursework Additional functionality	
 			GameObject* lockedObject	= nullptr;
-			Vector3 lockedOffset		= Vector3(0, 14, 20);
+			Vector3 lockedOffset		= Vector3(0, 5, 17);
 			void LockCameraToObject(GameObject* o) {
 				lockedObject = o;
 			}
 
+			vector<DestructableObject*> destructableObjects;
+			vector<Powerup*> powerupObjects;
+
 			GameObject* objClosest = nullptr;
+
+			NavigationGrid* worldGrid;
+
+			Player* player;
+
 		};
 	}
 }
