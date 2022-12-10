@@ -128,6 +128,8 @@ void TutorialGame::UpdateGame(float dt) {
 		}
 	}
 
+
+
 	SelectObject();
 	MoveSelectedObject();
 
@@ -152,6 +154,26 @@ void TutorialGame::UpdateGame(float dt) {
 			world->RemoveGameObject(i);
 		}
 	}
+	for (Human* i : humanObjects)
+	{
+		if (!(i->LookingForPlayer())) continue;
+		RayCollision humanLookCollision;
+		Vector3 rayPos;
+		Vector3 rayDir;
+
+		rayPos = i->GetTransform().GetPosition();
+
+		rayDir = (player->GetTransform().GetPosition() - rayPos).Normalised();
+
+
+		Ray r = Ray(rayPos, rayDir);
+		if (world->Raycast(r, closestCollision, true, i)) {
+			i->SetPlayerSpotted(dynamic_cast<Player*>((GameObject*)closestCollision.node));
+		}
+
+	}
+
+
 
 	Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
 
@@ -227,8 +249,9 @@ void TutorialGame::LockedObjectMovement() {
 	float rotationSpeed = lockedObject->RotationSpeed();
 	float yaw = (Window::GetMouse()->GetRelativePosition().x);
 	
-	Vector3 rotation(0.0f, -yaw, 0.0f);
-	lockedObject->GetPhysicsObject()->AddTorque(rotation * rotationSpeed);
+	Vector3 rotation(0.0f, -yaw * rotationSpeed, 0.0f);
+	//lockedObject->GetPhysicsObject()->AddTorque(rotation * rotationSpeed);
+	lockedObject->GetPhysicsObject()->SetAngularVelocity(rotation);
 
 	float pitch = (Window::GetMouse()->GetRelativePosition().y);
 
@@ -336,11 +359,12 @@ void TutorialGame::InitWorld2() {
 	physics->Clear();
 	destructableObjects.clear();
 	powerupObjects.clear();
+	humanObjects.clear();
 
 	player = AddPlayerToWorld(Vector3(100, 0, 100));
-
 	LockCameraToObject(player);
 
+	Human* human = AddHumanToWorld(Vector3(100, 0, 80));
 	
 	worldGrid = new NavigationGrid("TestGrid2.txt");
 	GridNode* allNodes = worldGrid->AllNodes();
@@ -368,8 +392,11 @@ void TutorialGame::InitWorld2() {
 				AddCrateToWorld(Vector3(nodePosition.x, nodePosition.y + 5, nodePosition.z), (gridWidth * y) + x);
 				break;
 			}
+			
 		}
 	}
+	
+	human->SetNavigationGrid(worldGrid);
 	AddBridgeToWorld();
 
 
@@ -537,8 +564,10 @@ Human* TutorialGame::AddHumanToWorld(const Vector3& position)
 {
 	Human* human = new Human(position);
 	human->SetRenderObject(new RenderObject(&human->GetTransform(), enemyMesh, nullptr, basicShader));
-
+	human->GetRenderObject()->SetColour(Vector4(0, 0, 1, 1));
 	world->AddGameObject(human);
+
+	humanObjects.push_back(human);
 	
 	return human;
 }

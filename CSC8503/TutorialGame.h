@@ -110,7 +110,7 @@ namespace NCL {
 
 			vector<DestructableObject*> destructableObjects;
 			vector<Powerup*> powerupObjects;
-
+			vector<Human*> humanObjects;
 			GameObject* objClosest = nullptr;
 
 			NavigationGrid* worldGrid;

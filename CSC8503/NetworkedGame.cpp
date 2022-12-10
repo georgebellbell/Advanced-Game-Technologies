@@ -38,7 +38,7 @@ void NetworkedGame::StartAsServer() {
 	StartLevel();
 }
 
-void NetworkedGame::StartAsClient(char a, char b, char c, char d) {
+ void NetworkedGame::StartAsClient(char a, char b, char c, char d) {
 	thisClient = new GameClient();
 	thisClient->Connect(a, b, c, d, NetworkBase::GetDefaultPort());
 
