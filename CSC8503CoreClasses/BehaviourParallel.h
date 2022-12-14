@@ -18,7 +18,7 @@ public:
 			}
 		}
 
-		if (succeededStates > 0) {
+		if (succeededStates == childNodes.size()) {
 			return Success;
 		}
 		else if (failedStates == childNodes.size()) {

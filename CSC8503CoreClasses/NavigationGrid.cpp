@@ -79,7 +79,7 @@ void NavigationGrid::BuildNodeConnections() {
 						n.costs[i] = 1;
 						break;
 					case 'd':
-						n.costs[i] = 3;
+						n.costs[i] = 10;
 						break;
 					case 'x':
 						n.connected[i] = nullptr; //actually a wall, disconnect!
@@ -98,8 +98,8 @@ NavigationGrid::~NavigationGrid()	{
 
 bool NavigationGrid::FindPath(const Vector3& from, const Vector3& to, NavigationPath& outPath) {
 	//need to work out which node 'from' sits in, and 'to' sits in
-	int fromX = ((int)from.x / nodeSize);
-	int fromZ = ((int)from.z / nodeSize);
+	int fromX = ((int)(from.x)/ nodeSize);
+	int fromZ = ((int)(from.z)/ nodeSize);
 
 	int toX = ((int)to.x / nodeSize);
 	int toZ = ((int)to.z / nodeSize);

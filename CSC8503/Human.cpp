@@ -1,4 +1,5 @@
 #include "Human.h"
+#include "Player.h"
 #include "PhysicsObject.h"
 #include "RenderObject.h"
 #include "GameObject.h"
@@ -26,6 +27,9 @@ Human::Human(const Vector3& position)
 	GetPhysicsObject()->SetInverseMass(inverseMass);
 	GetPhysicsObject()->InitSphereInertia();
 
+	objectLayerMask = enemyLayerMask;
+	objectLayer = enemy;
+
 	//CreateStateMachine
 	stateMachine = new StateMachine();
 
@@ -40,10 +44,10 @@ Human::Human(const Vector3& position)
 		[&]()->bool
 		{
 			if (hitByPlayer) {
-				movementSpeed = movementSpeed * 2;
+				movementSpeed = movementSpeed * 3;
 				FindPositionAwayFromPlayer();
 				renderObject->SetColour(Vector4(1, 0, 0, 1));
-				lookingForPlayer = true;
+				//lookingForPlayer = true;
 				return true;
 			}
 			return false;
@@ -57,11 +61,11 @@ Human::Human(const Vector3& position)
 		[&]()->bool
 		{
 			if (scaredWaitTime <= 0.0f) {
-				movementSpeed = movementSpeed / 2;
+				movementSpeed = movementSpeed / 3;
 				FindRandomPosition();
 				renderObject->SetColour(Vector4(0, 0, 1, 1));
 				hitByPlayer = false;
-				lookingForPlayer = false;
+				//lookingForPlayer = false;
 				return true;
 			}
 			return false;
@@ -92,7 +96,6 @@ void Human::GeneratePassiveHSM() {
 	State* patrol_wait = new State([&](float dt)->void
 		{
 			passiveWaitTime -= dt;
-			std::cout << passiveWaitTime << "\n";
 		}
 	);
 	passiveHSM->GetStateMachine()->AddState(patrol_follow);
@@ -102,7 +105,6 @@ void Human::GeneratePassiveHSM() {
 		[&]()->bool
 		{
 			float distance = (*targetPosition - transform.GetPosition()).Length();
-			std::cout << distance << "\n";
 
 			if (distance < 10.0f) {
 				passiveWaitTime = 5.0f;
@@ -146,7 +148,7 @@ void Human::GenerateScaredHSM() {
 		[&]()->bool
 		{
 			float distance = (player->GetTransform().GetPosition() - transform.GetPosition()).Length();
-			if (distance < 10.0f || playerSpotted)
+			if (distance < 10.0f || CanSeePlayer())
 			{
 				scaredWaitTime = 3.0f;
 				FindPositionAwayFromPlayer();
@@ -159,6 +161,27 @@ void Human::GenerateScaredHSM() {
 	));
 	scaredHSM->GetStateMachine()->AddState(scared_move);
 	scaredHSM->GetStateMachine()->AddState(scared_look);
+}
+
+bool Human::CanSeePlayer()
+{
+	RayCollision humanLookCollision;
+	Vector3 rayPos;
+	Vector3 rayDir;
+
+	rayPos = GetTransform().GetPosition();
+
+	rayDir = (player->GetTransform().GetPosition() - rayPos).Normalised();
+
+
+	Ray r = Ray(rayPos, rayDir);
+	if (humanWorld->Raycast(r, humanLookCollision, true, this)) {
+		if (dynamic_cast<Player*>((GameObject*)humanLookCollision.node)) {
+			return true;
+		}
+		return false;
+	}
+	return false;
 }
 
 Human::~Human()
@@ -230,7 +253,7 @@ void Human::FindRandomPosition()
 		Vector3 a = path[i - 1];
 		Vector3 b = path[i];
 
-		Debug::DrawLine(a, b, Vector4(0, 1, 0, 1), 100.0f);
+		Debug::DrawLine(a, b, Vector4(0, 1, 0, 1), 10.0f);
 	}
 
 	
@@ -240,7 +263,7 @@ void Human::FindPositionAwayFromPlayer()
 {
 	FindRandomPosition();
 	float distance = (*targetPosition - transform.GetPosition()).Length();
-	if (distance <= 50.0f) {
+	if (distance <= 40.0f) {
 		return FindPositionAwayFromPlayer();
 	}
 }

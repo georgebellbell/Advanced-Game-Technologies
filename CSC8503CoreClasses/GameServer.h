@@ -1,5 +1,6 @@
 #pragma once
 #include "NetworkBase.h"
+#include "GameObject.h"
 
 namespace NCL {
 	namespace CSC8503 {
@@ -19,11 +20,14 @@ namespace NCL {
 
 			virtual void UpdateServer();
 
+		
+
 		protected:
 			int			port;
 			int			clientMax;
 			int			clientCount;
 			GameWorld*	gameWorld;
+			//vector<GameObject*> players;
 
 			int incomingDataRate;
 			int outgoingDataRate;

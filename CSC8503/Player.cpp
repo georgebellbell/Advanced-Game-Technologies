@@ -36,6 +36,8 @@ Player::Player(const Vector3& position)
 	jumpPower = initialJumpPower;
 	rotationSpeed = initialRotationSpeed;
 
+	origin = position;
+
 
 	InitialiseStateMachine();
 
@@ -49,13 +51,15 @@ void Player::InitialiseStateMachine()
 
 	State* defaultState = new State([&](float dt)->void
 		{
-			
+			PlayerMovement(dt);
 		}
 	);
 	mainStateMachine->GetStateMachine()->AddState(defaultState);
 
 	State* powerupState = new State([&](float dt)->void
 		{
+			PlayerMovement(dt);
+
 			powerupTimeRemaining -= dt;
 		}
 	);
@@ -84,6 +88,48 @@ void Player::InitialiseStateMachine()
 
 	stateMachine->AddState(mainStateMachine);
 	
+	HierarchalStateMachine* deadStateMachine = new HierarchalStateMachine();
+
+	State* deadState = new State([&](float dt)->void
+		{
+			Vector3 direction = (origin - transform.GetPosition());
+			direction.Normalise();
+			physicsObject->AddForce(direction * 20.0f);
+
+		}
+	);
+
+	deadStateMachine->GetStateMachine()->AddState(deadState);
+
+	stateMachine->AddState(deadStateMachine);
+
+	stateMachine->AddTransition(new StateTransition(mainStateMachine, deadStateMachine,
+		[&]()->bool
+		{
+			if (dead) {
+				objectLayer = deadPlayer;
+				renderObject->SetColour(Vector4(0, 0, 0, 0.2f));
+				return true;
+			}
+			return false;
+		}
+	));
+	stateMachine->AddTransition(new StateTransition(deadStateMachine, mainStateMachine,
+		[&]()->bool
+		{
+			float distance = (origin - transform.GetPosition()).Length();
+
+			if (distance <= 10.0f) {
+				objectLayer = player;
+				renderObject->SetColour(defaultColour);
+				dead = false;
+				ignoreGravity = false;
+				return true;
+			}
+			return false;
+		}
+	));
+
 
 }
 
@@ -134,4 +180,73 @@ void Player::PowerupCollected(Powerup* powerup)
 		break;
 	}
 }
+
+void Player::PlayerMovement(float dt)
+{
+	float pitch = (Window::GetMouse()->GetRelativePosition().y);
+	float yaw = (Window::GetMouse()->GetRelativePosition().x);
+
+	RotatePlayer(pitch, yaw);
+
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
+		MovePlayer(0);
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
+		MovePlayer(1);
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::S)) {
+		MovePlayer(2);
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
+		MovePlayer(3);
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
+		MovePlayer(4);
+	}
+}
+
+void Player::MovePlayer(int keyIndex) {
+	Vector3 fwdAxis		= transform.GetOrientation() * Vector3(0, 0, -1);
+	Vector3 rightAxis	= transform.GetOrientation() * Vector3(1, 0, 0);
+	switch (keyIndex) {
+	case 0:
+		if (!jumping) {
+			physicsObject->AddForce(Vector3(0, 10, 0) * jumpPower);
+			jumping = true;
+		}
+		break;
+	case 1: //W
+		physicsObject->AddForce(fwdAxis * movementSpeed);
+		break;
+	case 2: //S
+		physicsObject->AddForce(-fwdAxis * movementSpeed);
+		break;
+	case 3: //D
+		physicsObject->AddForce(rightAxis * movementSpeed);
+		break;
+	case 4: //S
+		physicsObject->AddForce(-rightAxis * movementSpeed);
+		break;
+	}
+
+
+
+}
+
+void Player::RotatePlayer(float pitch, float yaw)
+{
+	//Vector3 rotation(0.0f, -yaw * rotationSpeed, 0.0f);
+
+	//physicsObject->SetAngularVelocity(rotation);
+
+
+	cameraOffset.y = cameraOffset.y + (pitch * rotationSpeed);
+
+}
+
 

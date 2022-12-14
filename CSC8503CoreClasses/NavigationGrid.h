@@ -36,7 +36,11 @@ namespace NCL {
 			~NavigationGrid();
 
 			bool FindPath(const Vector3& from, const Vector3& to, NavigationPath& outPath) override;
-
+			bool FindOffsetPath(const Vector3& from, const Vector3& to, NavigationPath& outPath, float xOffset = 0.0f, float zOffset = 0.0f){
+				Vector3 newFrom(from.x - xOffset, from.y, from.z - zOffset);
+				Vector3 newTo(to.x - xOffset, to.y, to.z - zOffset);
+				return FindPath(newFrom, newTo, outPath);
+			}
 			GridNode* AllNodes() {
 				return allNodes;
 			}

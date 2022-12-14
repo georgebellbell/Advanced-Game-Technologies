@@ -2,6 +2,7 @@
 #include "StateGameObject.h"
 #include "NavigationGrid.h"
 #include "NavigationMesh.h"
+#include "GameWorld.h"
 
 using std::vector;
 
@@ -30,12 +31,9 @@ namespace NCL::CSC8503 {
 			humanNavGrid = grid;
 		}
 
-		void SetPlayerSpotted(bool spotted) {
-			playerSpotted = spotted;
-		}
 
-		bool LookingForPlayer() {
-			return lookingForPlayer;
+		void SetWorld(GameWorld* world) {
+			humanWorld = world;
 		}
 	protected:
 		Vector3 GetForceDirection(Vector3 position);
@@ -72,11 +70,14 @@ namespace NCL::CSC8503 {
 		float scaredWaitTime = 3.0f;
 
 		bool hitByPlayer = false;
-		bool playerSpotted = false;
-		bool lookingForPlayer = false;
+		
 
 		void GeneratePassiveHSM();
 		void GenerateScaredHSM();
+
+		GameWorld* humanWorld;
+
+		bool CanSeePlayer();
 		
 	};
 }

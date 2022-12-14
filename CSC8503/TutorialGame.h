@@ -10,8 +10,10 @@
 #include "Bin.h"
 #include "Crate.h"
 #include "Powerup.h"
+#include "Goose.h"
 #include "NavigationGrid.h"
 #include "NavigationMesh.h"
+#include "TriggerObject.h"
 
 namespace NCL {
 	namespace CSC8503 {
@@ -22,10 +24,13 @@ namespace NCL {
 
 			virtual void UpdateGame(float dt);
 
+			
+
 		protected:
 			void InitialiseAssets();
 
 			void InitCamera();
+			void UpdateCamera();
 			void UpdateKeys();
 
 			void ToggleGravity();
@@ -33,20 +38,7 @@ namespace NCL {
 			void InitWorld();
 			void InitWorld2();
 
-
-			/*
-			These are some of the world/object creation functions I created when testing the functionality
-			in the module. Feel free to mess around with them to see different objects being created in different
-			test scenarios (constraints, collision types, and so on). 
-			*/
-			void InitGameExamples();
-
-			void InitSphereGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, float radius);
-			void InitMixedGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing);
-			void InitCubeGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, const Vector3& cubeDims);
-
-			void InitDefaultFloor();
-			void InitGameFloor();
+			void InitFloors();
 
 			void AddBridgeToWorld();
 
@@ -55,11 +47,12 @@ namespace NCL {
 			void DebugObjectMovement();
 			void LockedObjectMovement();
 
-			GameObject* AddFloorToWorld(const Vector3& position);
+			GameObject* AddMainFloorToWorld(const Vector3& position);
+			GameObject* AddMazeFloorToWorld(const Vector3& position);
 			GameObject* AddSphereToWorld(const Vector3& position, float radius, float inverseMass = 10.0f, bool hollow = false);
 			GameObject* AddCubeToWorld(const Vector3& position, Vector3 dimensions, float inverseMass = 10.0f);
 
-			Player* AddPlayerToWorld(const Vector3& position);
+			Player* AddPlayerToWorld(const Vector3& position, int id);
 
 			GameObject* AddEnemyToWorld(const Vector3& position);
 			GameObject* AddBonusToWorld(const Vector3& position);
@@ -69,6 +62,9 @@ namespace NCL {
 			Human* AddHumanToWorld(const Vector3& position);
 			Powerup* AddRandomPowerupToWorld(const Vector3& position);
 			Powerup* AddPowerupToWorld(const Vector3& position, PowerupType powerupType);
+			Goose* AddGooseToWorld(const Vector3& position);
+			TriggerObject* AddTriggerToWorld(const Vector3& position, Vector3 dimensions);
+			
 
 			StateGameObject* AddStateObjectToWorld(const Vector3& position);
 			StateGameObject* testStateObject;
@@ -100,6 +96,7 @@ namespace NCL {
 			MeshGeometry*	enemyMesh	= nullptr;
 			MeshGeometry*	bonusMesh	= nullptr;
 			MeshGeometry* cylinderMesh  = nullptr;
+			MeshGeometry* gooshMesh = nullptr;
 
 			//Coursework Additional functionality	
 			GameObject* lockedObject	= nullptr;
@@ -114,6 +111,7 @@ namespace NCL {
 			GameObject* objClosest = nullptr;
 
 			NavigationGrid* worldGrid;
+			NavigationGrid* mazeGrid;
 
 			Player* player;
 

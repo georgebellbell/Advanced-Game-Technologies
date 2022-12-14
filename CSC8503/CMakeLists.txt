@@ -16,6 +16,9 @@ set(Header_Files
     "Bin.h"
     "Crate.h"
     "Powerup.h"
+    "Goose.h"
+    "BehaviourTreeObject.h"
+    "TriggerObject.h"
 )
 source_group("Header Files" FILES ${Header_Files})
 
@@ -33,7 +36,8 @@ set(Source_Files
     "Bin.cpp"
     "Crate.cpp"
     "Powerup.cpp"
-
+    "Goose.cpp"
+    "TriggerObject.cpp"
 )
 
 if(USE_VULKAN)

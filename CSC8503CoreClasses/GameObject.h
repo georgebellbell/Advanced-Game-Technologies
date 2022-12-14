@@ -2,6 +2,7 @@
 #include "Transform.h"
 #include "CollisionVolume.h"
 #include "../Build/CSC8503CoreClasses/CollisionLayerMatrix.h"
+#include "NetworkObject.h"
 
 #include <string>
 
@@ -102,7 +103,13 @@ namespace NCL::CSC8503 {
 			return rotationSpeed;
 		}
 
-		
+		bool IgnoreGravity() {
+			return ignoreGravity;
+		}
+
+		void SetNetworkObject(NetworkObject* n) {
+			networkObject = n;
+		}
 
 	protected:
 		Transform			transform;
@@ -125,6 +132,8 @@ namespace NCL::CSC8503 {
 		float movementSpeed;
 		float jumpPower;
 		float rotationSpeed;
+
+		bool ignoreGravity = false;
 	};
 }
 

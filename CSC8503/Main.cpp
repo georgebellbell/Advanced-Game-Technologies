@@ -369,8 +369,8 @@ int main() {
 	}	
 	//TestPushdownAutomata(w);
 
-	w->ShowOSPointer(false);
-	w->LockMouseToWindow(true);
+	w->ShowOSPointer(true);
+	w->LockMouseToWindow(false);
 
 	//TutorialGame* g = new TutorialGame();
 
@@ -395,7 +395,9 @@ int main() {
 			w->SetWindowPosition(0, 0);
 		}
 
-		w->SetTitle("Gametech frame time:" + std::to_string(1000.0f * dt));
+		//w->SetTitle("Gametech frame time:" + std::to_string(1000.0f * dt));
+		w->SetTitle(g->GetGameType());
+		
 
 		g->UpdateGame(dt);
 	}

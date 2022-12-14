@@ -68,7 +68,7 @@ namespace NCL {
 			Camera* mainCamera;
 			bool shuffleConstraints;
 			bool shuffleObjects;
-			int		worldIDCounter;
+			int		worldIDCounter = 10;
 			int		worldStateCounter;
 		};
 	}

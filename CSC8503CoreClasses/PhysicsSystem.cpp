@@ -7,6 +7,7 @@
 #include "CollisionVolume.h"
 #include "Constraint.h"
 
+
 #include "Debug.h"
 #include "Window.h"
 #include <functional>
@@ -370,9 +371,7 @@ void PhysicsSystem::NarrowPhase() {
 			allCollisions.insert(info);
 		}
 	}
-	{
-
-	}
+	
 }
 
 /*
@@ -399,8 +398,8 @@ void PhysicsSystem::IntegrateAccel(float dt) {
 		Vector3 linearVel = object->GetLinearVelocity();
 		Vector3 force = object->GetForce();
 		Vector3 accel = force * inverseMass;
-
-		if (applyGravity && inverseMass > 0) {
+		//dynamic_cast<Player*>((GameObject*)humanLookCollision.node)
+		if (applyGravity && inverseMass > 0 && !(*i)->IgnoreGravity()){
 			accel += gravity;
 		}
 

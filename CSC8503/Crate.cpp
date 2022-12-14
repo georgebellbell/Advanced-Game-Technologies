@@ -24,6 +24,9 @@ Crate::Crate(const Vector3& position)
 	physicsObject->SetElasticity(0.2);
 	physicsObject->SetInverseMass(inverseMass);
 	physicsObject->InitCubeInertia();
+
+	objectLayerMask = destructableLayerMask;
+	objectLayer = destructables;
 }
 
 Crate::~Crate()

@@ -3,6 +3,7 @@
 #include "NetworkObject.h"
 #include "GameServer.h"
 #include "GameClient.h"
+#include "PhysicsObject.h"
 
 #define COLLISION_MSG 30
 
@@ -34,11 +35,14 @@ void NetworkedGame::StartAsServer() {
 	thisServer = new GameServer(NetworkBase::GetDefaultPort(), 4);
 
 	thisServer->RegisterPacketHandler(Received_State, this);
+	thisServer->RegisterPacketHandler(Player_Added, this);
 
 	StartLevel();
 }
 
  void NetworkedGame::StartAsClient(char a, char b, char c, char d) {
+	 //if (thisServer == nullptr) return;
+
 	thisClient = new GameClient();
 	thisClient->Connect(a, b, c, d, NetworkBase::GetDefaultPort());
 
@@ -46,6 +50,13 @@ void NetworkedGame::StartAsServer() {
 	thisClient->RegisterPacketHandler(Full_State, this);
 	thisClient->RegisterPacketHandler(Player_Connected, this);
 	thisClient->RegisterPacketHandler(Player_Disconnected, this);
+	thisClient->RegisterPacketHandler(Player_ID, this);
+
+	player = AddPlayerToWorld(Vector3(100, 0, 100), -1);
+	
+	LockCameraToObject(player);
+	string title("CLIENT");
+	//Window::SetTitle(title);
 
 	StartLevel();
 }
@@ -56,7 +67,7 @@ void NetworkedGame::UpdateGame(float dt) {
 		if (thisServer) {
 			UpdateAsServer(dt);
 		}
-		if (thisClient) {
+		else if (thisClient) {
 			UpdateAsClient(dt);
 		}
 		timeToNextPacket += 1.0f / 20.0f; //20hz server/client update
@@ -73,6 +84,9 @@ void NetworkedGame::UpdateGame(float dt) {
 }
 
 void NetworkedGame::UpdateAsServer(float dt) {
+	//player->PlayerMovement(dt);
+	world->GetMainCamera()->UpdateCamera(dt);
+	thisServer->UpdateServer();
 	packetsToSnapshot--;
 	if (packetsToSnapshot < 0) {
 		BroadcastSnapshot(false);
@@ -82,20 +96,57 @@ void NetworkedGame::UpdateAsServer(float dt) {
 		BroadcastSnapshot(true);
 	}
 
-	thisServer->UpdateServer();
+	//Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
+
 }
 
 void NetworkedGame::UpdateAsClient(float dt) {
+	
+	if (player->GetWorldID() == -1 && thisClient->connected) {
+		AddPlayerToServerPacket addPacket;
+		thisClient->UpdateClient();
+		addPacket.lastID = 0;
+		thisClient->SendPacket(addPacket);
+		std::cout << "Requesting player from server\n";
+		player->SetWorldID(-2);
+		return;
+	}
+	
 	ClientPacket newPacket;
+	thisClient->UpdateClient();
+	newPacket.lastID = player->GetWorldID(); //You'll need to work this out somehow...
 
-	if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::SPACE)) {
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
 		//fire button pressed!
 		newPacket.buttonstates[0] = 1;
-		newPacket.lastID = 0; //You'll need to work this out somehow...
 	}
+	
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
+		newPacket.buttonstates[1] = 1;
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::S)) {
+		newPacket.buttonstates[2] = 1;
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
+		newPacket.buttonstates[3] = 1;
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
+		newPacket.buttonstates[4] = 1;
+	}
+
+	//float pitch = (Window::GetMouse()->GetRelativePosition().y);
+	float yaw = (Window::GetMouse()->GetRelativePosition().x);
+	newPacket.yaw = yaw;
 	thisClient->SendPacket(newPacket);
 
-	thisClient->UpdateClient();
+	
+
+	Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
+
 }
 
 void NetworkedGame::BroadcastSnapshot(bool deltaFrame) {
@@ -148,16 +199,108 @@ void NetworkedGame::UpdateMinimumState() {
 }
 
 void NetworkedGame::SpawnPlayer() {
+	int playerIndex = serverPlayers.size();
+	
+	Player* newPlayer = AddPlayerToWorld(Vector3(100, 10, 70 - 10 * playerIndex), playerIndex);
+
+	serverPlayers.insert(std::pair<int, GameObject*>(playerIndex, newPlayer));
+
+
+	AddPlayerWithID newPacket;
+	thisServer->UpdateServer();
+	newPacket.lastID = 0;
+	newPacket.newPlayerID = playerIndex;
+	newPacket.numberOfPlayers = playerIndex;
+	thisServer->SendGlobalPacket(newPacket);
+
+	std::cout << "Current player count: " << serverPlayers.size();
+
 
 }
 
 void NetworkedGame::StartLevel() {
-	TutorialGame();
+	
+
 }
 
 void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {
 	
+	std::vector<GameObject*>::const_iterator first;
+	std::vector<GameObject*>::const_iterator last;
+
+	world->GetObjectIterators(first, last);
+
+	if (type == Player_Added) {
+		SpawnPlayer();
+		return;
+	}
+
+	if (type == Player_ID) {
+		if (recieved) return;
+		recieved = true;
+		AddPlayerWithID* recieved_server = (AddPlayerWithID*)payload;
+		if (player->GetWorldID() == -2) {
+			std::cout << "my player has now been assigned an ID!\n";
+			player->SetWorldID(recieved_server->newPlayerID);
+			player->GetNetworkObject()->SetNetworkID(recieved_server->newPlayerID);
+			serverPlayers.insert(std::pair<int, GameObject*>(recieved_server->newPlayerID, player));
+
+			for (int i = 0; i < recieved_server->numberOfPlayers; i++)
+			{
+				Player* existingPlayer = AddPlayerToWorld(Vector3(100, 0, 100), i);
+				serverPlayers.insert(std::pair<int, GameObject*>(i, existingPlayer));
+			}
+
+			recieved = false;
+		}
+		else{
+			std::cout << "Server has created a new player, I now know they exist!\n";
+			Player* newPlayer = AddPlayerToWorld(Vector3(100, 0, 100), recieved_server->newPlayerID);
+			serverPlayers.insert(std::pair<int, GameObject*>(recieved_server->newPlayerID, newPlayer));
+			recieved = false;
+
+		}
+		return;
+	}
+
+	for (auto i = first; i != last; ++i) {
+		NetworkObject* o = (*i)->GetNetworkObject();
+		if (!o) continue;
+		
+		if (((FullPacket*)payload)->objectID == o->GetNetworkID())
+		{
+			o->ReadPacket(*payload);
+		}
+
+		if (type == Received_State) {
+			ClientPacket* recieved_client = (ClientPacket*)payload;
+
+			if (dynamic_cast<Player*>((*i))) {
+				if (((ClientPacket*)payload)->lastID == o->GetNetworkID()) {
+					
+					Player* nPlayer = (Player*)(*i);
+					for (int i = 0; i < sizeof(recieved_client->buttonstates); i++)
+					{
+						if (recieved_client->buttonstates[i] == 1) {
+							nPlayer->MovePlayer(i);
+						}
+					}
+					Vector3 rotation(0.0f, -recieved_client->yaw * nPlayer->RotationSpeed(), 0.0f);
+					//std::cout << -recieved_client->yaw << "\n";
+
+					nPlayer->GetPhysicsObject()->SetAngularVelocity(rotation);
+				}
+				
+			}
+		}
+
+
+		
+		
+		
+	}
 }
+	
 
 void NetworkedGame::OnPlayerCollision(NetworkPlayer* a, NetworkPlayer* b) {
 	if (thisServer) { //detected a collision between players!

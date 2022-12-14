@@ -1,5 +1,7 @@
 #pragma once
 #include "StateGameObject.h"
+#include <algorithm>
+#include "Window.h"
 
 using std::vector;
 
@@ -32,7 +34,7 @@ namespace NCL::CSC8503 {
 		}
 
 		bool Jumping() const {
-			return jumping;
+			return false;//jumping;
 		}
 
 		void IsJumping(bool status) {
@@ -47,7 +49,28 @@ namespace NCL::CSC8503 {
 			return playerScore;
 		}
 
+		void KillPlayer() {
+			dead = true;
+			ignoreGravity = true;
+			playerScore -= 5;
+		}
+
+		bool IsPlayerDead() {
+			return dead;
+		}
+
 		Vector4 defaultColour = Vector4(1.00, 0.20, 1.00, 1.00);
+
+		void PlayerMovement(float dt);
+
+		void MovePlayer(int keyIndex);
+
+		void RotatePlayer(float pitch, float yaw);
+
+		Vector3 CameraOffset() {
+			return cameraOffset;
+		}
+
 
 	protected:
 		float meshSize = 1.0f;
@@ -63,5 +86,10 @@ namespace NCL::CSC8503 {
 		int playerScore = 0;
 
 		float powerupTimeRemaining = 0;
+
+		bool dead = false;
+
+		Vector3 origin;
+		Vector3 cameraOffset = Vector3(0, 5, 17);
 	};
 }

@@ -31,12 +31,33 @@ namespace NCL::CSC8503 {
 	struct ClientPacket : public GamePacket {
 		int		lastID;
 		char	buttonstates[8];
+		float	yaw;
 
 		ClientPacket() {
 			type = Received_State;
 			size = sizeof(ClientPacket);
 		}
 	};
+
+	struct AddPlayerToServerPacket : public GamePacket {
+		int lastID;
+
+		AddPlayerToServerPacket() {
+			type = Player_Added;
+			size = sizeof(AddPlayerToServerPacket);
+		}
+	};
+
+	struct AddPlayerWithID : public GamePacket {
+		int lastID;
+		int newPlayerID;
+		int numberOfPlayers;
+		AddPlayerWithID() {
+			type = Player_ID;
+			size = sizeof(AddPlayerWithID);
+		}
+	};
+
 
 	class NetworkObject		{
 	public:
@@ -50,6 +71,13 @@ namespace NCL::CSC8503 {
 
 		void UpdateStateHistory(int minID);
 
+		int GetNetworkID() {
+			return networkID;
+		}
+
+		void SetNetworkID(int newID) {
+			networkID = newID;
+		}
 	protected:
 
 		NetworkState& GetLatestNetworkState();

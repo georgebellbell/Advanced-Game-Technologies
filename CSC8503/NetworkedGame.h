@@ -26,6 +26,18 @@ namespace NCL {
 
 			void OnPlayerCollision(NetworkPlayer* a, NetworkPlayer* b);
 
+			std::string GetGameType() {
+
+				if (thisServer != nullptr) {
+					return string("SERVER");
+				}
+				else if (thisClient != nullptr) {
+					return string("CLIENT");
+				}
+				return string("NULL");
+			}
+
+			bool recieved = false;
 		protected:
 			void UpdateAsServer(float dt);
 			void UpdateAsClient(float dt);

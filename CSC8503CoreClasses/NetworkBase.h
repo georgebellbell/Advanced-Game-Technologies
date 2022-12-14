@@ -14,6 +14,8 @@ enum BasicNetworkMessages {
 	Received_State, //received from a client, informs that its received packet n
 	Player_Connected,
 	Player_Disconnected,
+	Player_Added,
+	Player_ID,
 	Shutdown
 };
 
@@ -34,6 +36,7 @@ struct GamePacket {
 		return sizeof(GamePacket) + size;
 	}
 };
+
 
 struct StringPacket : public GamePacket {
 	char stringData[256];

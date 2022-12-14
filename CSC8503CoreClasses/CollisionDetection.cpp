@@ -522,7 +522,7 @@ bool CollisionDetection::AABBCapsuleIntersection(
 		Vector3 collisionNormal = localPoint.Normalised();
 
 		float penetration = (capsuleRadius - distance);
-		Vector3 localA = Vector3();
+		Vector3 localA = collisionNormal * closestPointOnBox;
 		Vector3 localB = -collisionNormal * capsuleRadius ;
 
 		collisionInfo.AddContactPoint(localA, localB, collisionNormal, penetration);

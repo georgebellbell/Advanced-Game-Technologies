@@ -7,6 +7,7 @@
 #include "OrientationConstraint.h"
 #include "StateGameObject.h"
 #include "Player.h"
+#include "NetworkObject.h"
 
 #include "NavigationGrid.h"
 #include "NavigationMesh.h"
@@ -26,7 +27,7 @@ TutorialGame::TutorialGame()	{
 	physics		= new PhysicsSystem(*world);
 
 	forceMagnitude	= 10.0f;
-	useGravity		= false;
+	useGravity		= true;
 	inSelectionMode = false;
 
 	InitialiseAssets();
@@ -47,6 +48,7 @@ void TutorialGame::InitialiseAssets() {
 	bonusMesh	= renderer->LoadMesh("apple.msh");
 	capsuleMesh = renderer->LoadMesh("capsule.msh");
 	cylinderMesh = renderer->LoadMesh("cylinder.msh");
+	gooshMesh = renderer->LoadMesh("goose.msh");
 
 
 	basicTex	= renderer->LoadTexture("checkerboard.png");
@@ -74,24 +76,11 @@ TutorialGame::~TutorialGame()	{
 }
 
 void TutorialGame::UpdateGame(float dt) {
-	if (inSelectionMode) {
-		world->GetMainCamera()->UpdateCamera(dt);
-	}
+	/*if (inSelectionMode) {
+		
+	}*/
 	if (lockedObject != nullptr && !inSelectionMode) {
-		Vector3 objPos = lockedObject->GetTransform().GetPosition();
-		Vector3 camPos = objPos + lockedObject->GetTransform().GetOrientation() * lockedOffset;
-		world->GetMainCamera()->SetPosition(camPos);
-
-		Matrix4 temp = Matrix4::BuildViewMatrix(camPos, objPos, Vector3(0,1,0));
-
-		Matrix4 modelMat = temp.Inverse();
-
-		Quaternion q(modelMat);
-		Vector3 angles = q.ToEuler(); //nearly there now!
-
-
-		world->GetMainCamera()->SetPitch(angles.x);
-		world->GetMainCamera()->SetYaw(angles.y);
+		UpdateCamera();
 	}
 
 	UpdateKeys();
@@ -128,10 +117,8 @@ void TutorialGame::UpdateGame(float dt) {
 		}
 	}
 
-
-
-	SelectObject();
-	MoveSelectedObject();
+	//SelectObject();
+	//MoveSelectedObject();
 
 	//Check destructables
 	for (DestructableObject* i : destructableObjects)
@@ -146,6 +133,8 @@ void TutorialGame::UpdateGame(float dt) {
 			world->RemoveGameObject(i);
 		}
 	}
+
+	// check powerups
 	for (Powerup* i : powerupObjects)
 	{
 		if (i->Collected()) {
@@ -154,32 +143,12 @@ void TutorialGame::UpdateGame(float dt) {
 			world->RemoveGameObject(i);
 		}
 	}
-	for (Human* i : humanObjects)
-	{
-		if (!(i->LookingForPlayer())) continue;
-		RayCollision humanLookCollision;
-		Vector3 rayPos;
-		Vector3 rayDir;
 
-		rayPos = i->GetTransform().GetPosition();
-
-		rayDir = (player->GetTransform().GetPosition() - rayPos).Normalised();
-
-
-		Ray r = Ray(rayPos, rayDir);
-		if (world->Raycast(r, closestCollision, true, i)) {
-			i->SetPlayerSpotted(dynamic_cast<Player*>((GameObject*)closestCollision.node));
-		}
-
-	}
-
-
-
-	Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
+	if (player != nullptr) 
+		Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
 
 
 	world->UpdateWorld(dt);
-	renderer->Update(dt);
 	renderer->Update(dt);
 	physics->Update(dt);
 
@@ -244,54 +213,12 @@ void TutorialGame::ToggleGravity()
 }
 
 void TutorialGame::LockedObjectMovement() {
-	float movementSpeed = lockedObject->MovementSpeed();
-	float jumpPower = lockedObject->JumpPower();
-	float rotationSpeed = lockedObject->RotationSpeed();
-	float yaw = (Window::GetMouse()->GetRelativePosition().x);
-	
-	Vector3 rotation(0.0f, -yaw * rotationSpeed, 0.0f);
-	//lockedObject->GetPhysicsObject()->AddTorque(rotation * rotationSpeed);
-	lockedObject->GetPhysicsObject()->SetAngularVelocity(rotation);
-
-	float pitch = (Window::GetMouse()->GetRelativePosition().y);
-
-	lockedOffset.y = max(1.0f, min(lockedOffset.y + (pitch * rotationSpeed), 10.0f));
-
-	
-	Matrix4 view		= world->GetMainCamera()->BuildViewMatrix();
-	Matrix4 camWorld	= view.Inverse();
-	
-	Vector3 rightAxis = Vector3(camWorld.GetColumn(0)); //view is inverse of model!
-
-	Vector3 fwdAxis = Vector3::Cross(Vector3(0, 1, 0), rightAxis);
-	fwdAxis.y = 0.0f;
-	fwdAxis.Normalise();
-
-	
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
-		lockedObject->GetPhysicsObject()->AddForce(fwdAxis * movementSpeed);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
-		lockedObject->GetPhysicsObject()->AddForce(-fwdAxis * movementSpeed);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
-		lockedObject->GetPhysicsObject()->AddForce(rightAxis * movementSpeed);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
-		lockedObject->GetPhysicsObject()->AddForce(-rightAxis * movementSpeed);
-	}
 
 	Player* player = (Player*)lockedObject;
+	if (player->IsPlayerDead()) return;
 
-	if (!player->Jumping()) {
-		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
-			lockedObject->GetPhysicsObject()->AddForce(Vector3(0, 10, 0) * jumpPower);
-			player->IsJumping(true);
-		}
-	}
+	
+	
 	
 }
 
@@ -342,17 +269,34 @@ void TutorialGame::InitCamera() {
 	lockedObject = nullptr;
 }
 
-void TutorialGame::InitWorld() {
-	world->ClearAndErase();
-	physics->Clear();
+void TutorialGame::UpdateCamera()
+{
+	if (player == nullptr) return;
+	Vector3 camLockOffset = player->CameraOffset();
+	Vector3 objPos = lockedObject->GetTransform().GetPosition();
+	Vector3 camPos = objPos + lockedObject->GetTransform().GetOrientation() * camLockOffset;
+	float defaultDistance = (camPos - objPos).Length();
+	RayCollision gooseLookCollision;
+	Vector3 rayPos;
+	Vector3 rayDir;
+	rayPos = objPos;
+	rayDir = (camPos - rayPos).Normalised();
+	Ray r = Ray(rayPos, rayDir);
+	if (world->Raycast(r, gooseLookCollision, true, lockedObject)) {
+		float distance = gooseLookCollision.rayDistance;
+		if (distance < defaultDistance) camPos = gooseLookCollision.collidedAt;
+	}
+	world->GetMainCamera()->SetPosition(camPos);
 
-	InitMixedGridWorld(15, 15, 3.5f, 3.5f);
+	Matrix4 temp = Matrix4::BuildViewMatrix(camPos, objPos, Vector3(0, 1, 0));
+	Matrix4 modelMat = temp.Inverse();
+	Quaternion q(modelMat);
+	Vector3 angles = q.ToEuler(); //nearly there now!
 
-	InitGameExamples();
-	InitDefaultFloor();
-
-	//testStateObject = AddStateObjectToWorld(Vector3(0, 10, 0));
+	world->GetMainCamera()->SetPitch(angles.x);
+	world->GetMainCamera()->SetYaw(angles.y);
 }
+
 
 void TutorialGame::InitWorld2() {
 	world->ClearAndErase();
@@ -361,10 +305,12 @@ void TutorialGame::InitWorld2() {
 	powerupObjects.clear();
 	humanObjects.clear();
 
-	player = AddPlayerToWorld(Vector3(100, 0, 100));
-	LockCameraToObject(player);
+	//player = AddPlayerToWorld(Vector3(100, 0, 100), -1);
+	//LockCameraToObject(player);
 
 	Human* human = AddHumanToWorld(Vector3(100, 0, 80));
+
+
 	
 	worldGrid = new NavigationGrid("TestGrid2.txt");
 	GridNode* allNodes = worldGrid->AllNodes();
@@ -395,12 +341,73 @@ void TutorialGame::InitWorld2() {
 			
 		}
 	}
-	
+
+
+	mazeGrid = new NavigationGrid("Maze.txt");
+
+	Goose* goose = AddGooseToWorld(Vector3(worldGrid->GridWidth() * worldGrid->NodeSize() + mazeGrid->GridWidth() * mazeGrid->NodeSize() + 10.0f,
+		0,
+		worldGrid->GridWidth() * worldGrid->NodeSize() / 3.5f + 10.0f));
+
+
+
+	GridNode* allMNodes = mazeGrid->AllNodes();
+	int gridMWidth = mazeGrid->GridWidth();
+	int gridMHeight = mazeGrid->GridHeight();
+	for (int y = 0; y < gridMHeight; ++y) {
+		for (int x = 0; x < gridMWidth; ++x) {
+			GridNode& n = allMNodes[(gridMWidth * y) + x];
+			n.position = Vector3(worldGrid->GridWidth() * worldGrid->NodeSize() + mazeGrid->GridWidth() * mazeGrid->NodeSize() + n.position.x,
+											n.position.y, 
+											worldGrid->GridWidth() * worldGrid->NodeSize() / 3.5f  + n.position.z);
+
+			
+			Vector3 nodePosition = n.position;
+			GameObject* object;
+			switch (n.type) {
+			case '.':
+				//clear area!
+				break;
+			case 'x':
+				//wall
+				object = AddCubeToWorld(Vector3(nodePosition.x, nodePosition.y + 12, nodePosition.z),
+					Vector3(5, 10, 5), 0.0f);
+				object->GetRenderObject()->SetColour(Vector4(0.07, 0.40, 0.00, 1.0f));
+				break;
+			case 'p':
+				AddRandomPowerupToWorld(Vector3(nodePosition.x, nodePosition.y + 5, nodePosition.z));
+				break;
+			case 'd':
+				Crate* crate =AddCrateToWorld(Vector3(nodePosition.x, nodePosition.y + 5, nodePosition.z), (gridMWidth * y) + x);
+				goose->AddObjectToProtect(crate);
+				break;
+			}
+
+		}
+	}
+
 	human->SetNavigationGrid(worldGrid);
+	human->SetWorld(world);
+	
+	goose->SetNavigationGrid(mazeGrid);
+	goose->SetWorld(world);
+
+	if (player != nullptr)
+		goose->SetPlayer(player);
+
+	goose->xOffset = worldGrid->GridWidth() * worldGrid->NodeSize() + mazeGrid->GridWidth() * mazeGrid->NodeSize();
+	goose->zOffset = worldGrid->GridWidth() * worldGrid->NodeSize() / 3.5f;
+
+	int gridWidthLen = worldGrid->GridWidth() * worldGrid->NodeSize();
+	int gridHeightLen = worldGrid->GridHeight() * worldGrid->NodeSize();
+	Vector3 startPos = Vector3(gridWidthLen + 150, -10, gridHeightLen / 2);
+
+	TriggerObject* trigger = AddTriggerToWorld(startPos, Vector3(5, 10, 10));
+	trigger->SetObjectToEffect(goose);
+	
+
 	AddBridgeToWorld();
-
-
-	InitGameFloor();
+	InitFloors();
 }
 
 Bin* TutorialGame::AddBinToWorld(const Vector3& position)
@@ -412,32 +419,7 @@ Bin* TutorialGame::AddBinToWorld(const Vector3& position)
 	return bin;
 }
 
-/*
 
-A single function to add a large immoveable cube to the bottom of our world
-
-*/
-GameObject* TutorialGame::AddFloorToWorld(const Vector3& position) {
-	GameObject* floor = new GameObject("floor");
-	int nodeSize = worldGrid->NodeSize();
-	Vector3 floorSize = Vector3(worldGrid->GridWidth() * nodeSize / 2
-		, 2, worldGrid->GridHeight() * nodeSize / 2);
-	AABBVolume* volume = new AABBVolume(floorSize);
-	floor->SetBoundingVolume((CollisionVolume*)volume);
-	floor->GetTransform()
-		.SetScale(floorSize * 2)
-		.SetPosition(position);
-
-	floor->SetRenderObject(new RenderObject(&floor->GetTransform(), cubeMesh, basicTex, basicShader));
-	floor->SetPhysicsObject(new PhysicsObject(&floor->GetTransform(), floor->GetBoundingVolume()));
-
-	floor->GetPhysicsObject()->SetInverseMass(0);
-	floor->GetPhysicsObject()->InitCubeInertia();
-
-	world->AddGameObject(floor);
-
-	return floor;
-}
 
 /*
 
@@ -495,12 +477,15 @@ GameObject* TutorialGame::AddCubeToWorld(const Vector3& position, Vector3 dimens
 	return cube;
 }
 
-Player* TutorialGame::AddPlayerToWorld(const Vector3& position) {
+Player* TutorialGame::AddPlayerToWorld(const Vector3& position, int id) {
 	Player* player = new Player(position);
 	player->SetRenderObject(new RenderObject(&player->GetTransform(), charMesh, nullptr, basicShader));
 	player->GetRenderObject()->SetColour(player->defaultColour);
+	NetworkObject* n = new NetworkObject(*player, id);
+	//player->SetNetworkObject(n);
 
 	world->AddGameObject(player);
+	player->SetWorldID(id);
 	return player;
 }
 
@@ -615,6 +600,25 @@ Powerup* TutorialGame::AddPowerupToWorld(const Vector3& position, PowerupType po
 	return powerup;
 }
 
+Goose* TutorialGame::AddGooseToWorld(const Vector3& position)
+{
+	Goose* goose = new Goose(position);
+
+	goose->SetRenderObject(new RenderObject(&goose->GetTransform(), gooshMesh, nullptr, basicShader));
+	
+	world->AddGameObject(goose);
+	return goose;
+}
+
+TriggerObject* TutorialGame::AddTriggerToWorld(const Vector3& position, Vector3 dimensions)
+{
+	TriggerObject* trigger = new TriggerObject(position, dimensions);
+	//trigger->SetRenderObject(new RenderObject(&trigger->GetTransform(), cubeMesh, nullptr, basicShader));
+
+	world->AddGameObject(trigger);
+	return trigger;
+}
+
 StateGameObject* TutorialGame::AddStateObjectToWorld(const Vector3& position)
 {
 	StateGameObject* apple = new StateGameObject();
@@ -636,19 +640,72 @@ StateGameObject* TutorialGame::AddStateObjectToWorld(const Vector3& position)
 	return apple;
 }
 
-void TutorialGame::InitDefaultFloor() {
-	AddFloorToWorld(Vector3(0, -20, 0));
+void TutorialGame::InitFloors() {
+	float worldWidth = worldGrid->GridWidth() * worldGrid->NodeSize();
+	float worldHeight = worldGrid->GridHeight() * worldGrid->NodeSize();
+
+	float mazeWidth = mazeGrid->GridWidth() * mazeGrid->NodeSize();
+	float mazeHeight = mazeGrid->GridHeight() * mazeGrid->NodeSize();
+
+	AddMainFloorToWorld(Vector3(worldWidth/ 2, -10, worldHeight/ 2));
+
+	AddMazeFloorToWorld(Vector3(worldWidth + mazeWidth + 70,
+		-10,
+		mazeWidth));
+
+
+
 }
-void TutorialGame::InitGameFloor() {
-	AddFloorToWorld(Vector3(worldGrid->GridWidth() * worldGrid->NodeSize()/ 2, 
-							-10, 
-							(worldGrid->GridHeight() * worldGrid->NodeSize() / 2)));
+
+GameObject* TutorialGame::AddMainFloorToWorld(const Vector3& position) {
+	GameObject* floor = new GameObject("floor");
+	int nodeSize = worldGrid->NodeSize();
+	Vector3 floorSize = Vector3(worldGrid->GridWidth() * nodeSize / 2
+		, 2, worldGrid->GridHeight() * nodeSize / 2);
+	AABBVolume* volume = new AABBVolume(floorSize);
+	floor->SetBoundingVolume((CollisionVolume*)volume);
+	floor->GetTransform()
+		.SetScale(floorSize * 2)
+		.SetPosition(position);
+
+	floor->SetRenderObject(new RenderObject(&floor->GetTransform(), cubeMesh, basicTex, basicShader));
+	floor->SetPhysicsObject(new PhysicsObject(&floor->GetTransform(), floor->GetBoundingVolume()));
+
+	floor->GetPhysicsObject()->SetInverseMass(0);
+	floor->GetPhysicsObject()->InitCubeInertia();
+
+	world->AddGameObject(floor);
+
+	return floor;
+}
+
+GameObject* TutorialGame::AddMazeFloorToWorld(const Vector3& position)
+{
+	GameObject* floor = new GameObject("floor");
+	int nodeSize = mazeGrid->NodeSize();
+	Vector3 floorSize = Vector3(mazeGrid->GridWidth() * nodeSize / 2
+		, 2, mazeGrid->GridHeight() * nodeSize / 2);
+	AABBVolume* volume = new AABBVolume(floorSize);
+	floor->SetBoundingVolume((CollisionVolume*)volume);
+	floor->GetTransform()
+		.SetScale(floorSize * 2)
+		.SetPosition(position);
+
+	floor->SetRenderObject(new RenderObject(&floor->GetTransform(), cubeMesh, basicTex, basicShader));
+	floor->SetPhysicsObject(new PhysicsObject(&floor->GetTransform(), floor->GetBoundingVolume()));
+
+	floor->GetPhysicsObject()->SetInverseMass(0);
+	floor->GetPhysicsObject()->InitCubeInertia();
+
+	world->AddGameObject(floor);
+
+	return floor;
 }
 
 void TutorialGame::AddBridgeToWorld() {
 	Vector3 cubeSize = Vector3(4, 1, 8);
 
-	float invCubeMass = 10;
+	float invCubeMass = 0;//10;
 	int numLinks = 10;
 	float maxDistance = 11;
 	float cubeDistance = 10;
@@ -658,6 +715,7 @@ void TutorialGame::AddBridgeToWorld() {
 	Vector3 startPos = Vector3(gridWidth + 10, -10, gridHeight/ 2);
 
 	GameObject* start = AddCubeToWorld(startPos + Vector3(0, 0, 0), cubeSize, 0);
+	
 	start->GetRenderObject()->SetColour(Vector4(1, 0, 0, 1));
 	GameObject* end = AddCubeToWorld(startPos + Vector3((numLinks + 2) * cubeDistance, 0, 0), cubeSize, 0);
 
@@ -687,51 +745,7 @@ void TutorialGame::AddBridgeToWorld() {
 
 }
 
-void TutorialGame::InitGameExamples() {
-	
-	AddEnemyToWorld(Vector3(5, 5, 0));
-	AddBonusToWorld(Vector3(10, 5, 0));
-	AddHumanToWorld(Vector3(10, 0, 10))->SetTarget(AddPlayerToWorld(Vector3(100, 0, 100)));
-	AddBridgeToWorld();
 
-}
-
-void TutorialGame::InitSphereGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, float radius) {
-	for (int x = 0; x < numCols; ++x) {
-		for (int z = 0; z < numRows; ++z) {
-			Vector3 position = Vector3(x * colSpacing, 10.0f, z * rowSpacing);
-			AddSphereToWorld(position, radius, 1.0f, true);
-		}
-	}
-	AddFloorToWorld(Vector3(0, -2, 0));
-}
-
-void TutorialGame::InitMixedGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing) {
-	float sphereRadius = 1.0f;
-	Vector3 cubeDims = Vector3(1, 1, 1);
-
-	for (int x = 0; x < numCols; ++x) {
-		for (int z = 0; z < numRows; ++z) {
-			Vector3 position = Vector3(x * colSpacing, 10.0f, z * rowSpacing);
-
-			if (rand() % 2) {
-				AddCubeToWorld(position, cubeDims);
-			}
-			else {
-				AddSphereToWorld(position, sphereRadius);
-			}
-		}
-	}
-}
-
-void TutorialGame::InitCubeGridWorld(int numRows, int numCols, float rowSpacing, float colSpacing, const Vector3& cubeDims) {
-	for (int x = 1; x < numCols+1; ++x) {
-		for (int z = 1; z < numRows+1; ++z) {
-			Vector3 position = Vector3(x * colSpacing, 10.0f, z * rowSpacing);
-			AddCubeToWorld(position, cubeDims, 1.0f);
-		}
-	}
-}
 
 /*
 Every frame, this code will let you perform a raycast, to see if there's an object
@@ -748,8 +762,8 @@ bool TutorialGame::SelectObject() {
 			Window::GetWindow()->LockMouseToWindow(false);
 		}
 		else {
-			Window::GetWindow()->ShowOSPointer(false);
-			Window::GetWindow()->LockMouseToWindow(true);
+			Window::GetWindow()->ShowOSPointer(true);
+			Window::GetWindow()->LockMouseToWindow(false);
 		}
 	}
 	if (inSelectionMode) {
