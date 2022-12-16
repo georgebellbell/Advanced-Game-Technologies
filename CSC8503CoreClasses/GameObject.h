@@ -23,8 +23,9 @@ namespace NCL::CSC8503 {
 
 		virtual void Update(float dt){}
 
-		void SetBoundingVolume(CollisionVolume* vol) {
+		void SetBoundingVolume(CollisionVolume* vol, bool isTrigger = false) {
 			boundingVolume = vol;
+			boundingVolume->SetTrigger(isTrigger);
 		}
 
 		const CollisionVolume* GetBoundingVolume() const {
@@ -57,6 +58,10 @@ namespace NCL::CSC8503 {
 
 		void SetPhysicsObject(PhysicsObject* newObject) {
 			physicsObject = newObject;
+		}
+
+		void SetName(const std::string& newName) {
+			name = newName;
 		}
 
 		const std::string& GetName() const {

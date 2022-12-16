@@ -19,7 +19,7 @@ namespace NCL::CSC8503 {
 		void CheckDestroyed() {}
 
 	protected:
-		void AddScoreToPlayer();
+		void AddScoreToPlayer() {}
 
 		int score = 3;
 		Vector3 dimensions;

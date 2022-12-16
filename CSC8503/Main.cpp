@@ -225,75 +225,7 @@ void TestBehaviourTree() {
 	std::cout << "All done!\n";
 }
 
-class PauseScreen : public PushdownState {
-	PushdownResult OnUpdate(float dt,
-		PushdownState** newState) override {
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::U)) {
-			return PushdownResult::Pop;
-		}
-		return PushdownResult::NoChange;
-	};
-	void OnAwake() override {
-		std::cout << "Press U to unpause the game\n";
-	}
-};
-class GameScreen : public PushdownState {
-	PushdownResult OnUpdate(float dt,
-		PushdownState** newState) override {
-		pauseReminder -= dt;
-		if (pauseReminder < 0) {
-			std::cout << "Coins mined: " << coinsMined << "\n";
-			std::cout << "Press P to pause game, or F1 to return to main menu!\n";
-			pauseReminder += 1.0f;
-		}
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::P)) {
-			*newState = new PauseScreen();
-			return PushdownResult::Push;
-		}
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::F1)) {
-			std::cout << "Returning to main menu\n";
-			return PushdownResult::Pop;
-		}
-		if (rand() % 7 == 0) {
-			coinsMined++;
-		}
-		return PushdownResult::NoChange;
-	};
-	void OnAwake() override {
-		std::cout << "Preparing to mine coins\n";
-	}
-protected:
-	int coinsMined = 0;
-	float pauseReminder = 1;
-};
 
-class IntroScreen : public PushdownState {
-	PushdownResult OnUpdate(float dt,
-		PushdownState** newState) override {
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::SPACE)) {
-			*newState = new GameScreen();
-			return PushdownResult::Push;
-		}
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::ESCAPE)) {
-			return PushdownResult::Pop;
-		}
-		return PushdownResult::NoChange;
-	};
-	void OnAwake() override {
-		std::cout << "welcome to a cool game\n";
-		std::cout << "Space to begin, escape to quit\n";
-	}
-};
-
-void TestPushdownAutomata(Window* w) {
-	PushdownMachine machine(new IntroScreen());
-	while (w->UpdateWindow()) {
-		float dt = w->GetTimer()->GetTimeDeltaSeconds();
-		if (!machine.Update(dt)) {
-			return;
-		}
-	}
-}
 
 class TestPacketReceiver : public PacketReceiver {
 public:
@@ -391,12 +323,14 @@ int main() {
 			w->ShowConsole(false);
 		}
 
-		if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::T)) {
+		/*if (Window::GetKeyboard()->KeyPressed(KeyboardKeys::T)) {
 			w->SetWindowPosition(0, 0);
-		}
+		}*/
 
 		//w->SetTitle("Gametech frame time:" + std::to_string(1000.0f * dt));
 		w->SetTitle(g->GetGameType());
+
+		
 		
 
 		g->UpdateGame(dt);

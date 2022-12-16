@@ -4,6 +4,8 @@
 #include "GameObject.h"
 #include "GameWorld.h"
 #include "Transform.h"
+#include "Human.h"
+#include "Player.h"
 
 #include "Crate.h"
 #include "CollisionVolume.h"
@@ -35,19 +37,20 @@ Crate::~Crate()
 
 void Crate::OnCollisionBegin(GameObject* otherObject)
 {
-	if (otherObject->GetName().compare(string("Player")) == 0 && !destroyed) {
-		playerCollided = (Player*)otherObject;
+	if (dynamic_cast<Player*>(otherObject) && !destroyed) {
+
 		destroyed = true;
-		AddScoreToPlayer();
+		((Player*)otherObject)->AddToTotalScore(score);
 	}
-}
+	
+	if (dynamic_cast<Human*>(otherObject)) {
+		Human* human = (Human*)otherObject;
+		destroyed = true;
+		if (human->ScaryPlayer() != nullptr) {
+			//playerCollided = human->ScaryPlayer();
+			(human->ScaryPlayer())->AddToTotalScore(score * 2.0f);
 
-
-
-void Crate::AddScoreToPlayer()
-{
-	if (playerCollided == nullptr) { //object destroyed without being hit by a player. must have been the wind...
-		return;
+		}
 	}
-	playerCollided->AddToTotalScore(score);
+	
 }

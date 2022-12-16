@@ -71,6 +71,14 @@ namespace NCL::CSC8503 {
 			return cameraOffset;
 		}
 
+		void CanPlayerMove(bool canPlayerMove) {
+			canMove = canPlayerMove;
+		}
+
+		bool GetPlayerMoveStatus() {
+			return canMove;
+		}
+
 
 	protected:
 		float meshSize = 1.0f;
@@ -88,6 +96,7 @@ namespace NCL::CSC8503 {
 		float powerupTimeRemaining = 0;
 
 		bool dead = false;
+		bool canMove = true;
 
 		Vector3 origin;
 		Vector3 cameraOffset = Vector3(0, 5, 17);

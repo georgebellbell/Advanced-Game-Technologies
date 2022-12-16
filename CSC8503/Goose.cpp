@@ -17,6 +17,7 @@ using namespace CSC8503;
 
 Goose::Goose(const Vector3& position)
 {
+	name = "goose";
 	Vector3 sphereSize = Vector3(2.0f, 2.0f, 2.0f);
 	SphereVolume* volume = new SphereVolume(2.0f);
 	SetBoundingVolume((CollisionVolume*)volume);
@@ -99,6 +100,14 @@ Goose::~Goose()
 	}
 }
 
+void Goose::Update(float dt)
+{
+	if (isServer) {
+		BehaviourState state = rootSequence->Execute(dt);
+		if (state == Success || state == Failure) rootSequence->Reset();
+	}
+}
+
 void Goose::OnCollisionBegin(GameObject* otherObject)
 {
 	///*if (otherObject->GetName().compare(string("Player")) == 0) {
@@ -119,7 +128,7 @@ void Goose::InitialiseAttackSequence()
 				state = Ongoing;
 			}
 			else if (state == Ongoing) {
-				float distanceToPlayer = (player->GetTransform().GetPosition()
+				float distanceToPlayer = (targetPlayer->GetTransform().GetPosition()
 					- transform.GetPosition()).Length();
 				if (distanceToPlayer <= 5.0) {
 					std::cout << "In range to attack!\n";
@@ -136,7 +145,9 @@ void Goose::InitialiseAttackSequence()
 			if (state == Initialise) {
 				// take points from player and reset their position
 				std::cout << "Attacking Player\n";
-				player->KillPlayer();
+				Vector3 direction = targetPlayer->GetTransform().GetPosition()
+					- transform.GetPosition();
+				physicsObject->AddForce(Vector3(1, 0, 1) * 30);
 				//hitPlayer = false;
 				state = Success;
 			}
@@ -157,7 +168,7 @@ void Goose::InitialiseChaseSequence()
 			canSeePlayer->Reset();
 			if (state == Initialise) {
 				std::cout << "Chasing Player\n";
-				*targetPosition = player->GetTransform().GetPosition();
+				*targetPosition = targetPlayer->GetTransform().GetPosition();
 				if (!GeneratePath()) {
 					state = Failure;
 					return state;
@@ -424,23 +435,26 @@ bool Goose::CheckForDestroyedObjects()
 
 bool Goose::CanSeePlayer()
 {
-	RayCollision gooseLookCollision;
-	Vector3 rayPos;
-	Vector3 rayDir;
+	for (auto i : victims) {
+		RayCollision gooseLookCollision;
+		Vector3 rayPos;
+		Vector3 rayDir;
 
-	rayPos = GetTransform().GetPosition();
+		rayPos = GetTransform().GetPosition();
 
-	rayDir = (player->GetTransform().GetPosition() - rayPos).Normalised();
+		rayDir = (i->GetTransform().GetPosition() - rayPos).Normalised();
 
-	//Debug::DrawLine(player->GetTransform().GetPosition(), rayPos, Vector4(0, 0, 1, 1), 15.0f);
-	Ray r = Ray(rayPos, rayDir);
-	if (gooseWorld->Raycast(r, gooseLookCollision, true, this)) {
+		//Debug::DrawLine(player->GetTransform().GetPosition(), rayPos, Vector4(0, 0, 1, 1), 15.0f);
+		Ray r = Ray(rayPos, rayDir);
+		if (gooseWorld->Raycast(r, gooseLookCollision, true, this)) {
 
-		GameObject* gameOb = (GameObject*)gooseLookCollision.node;
-		if (dynamic_cast<Player*>((GameObject*)gooseLookCollision.node)) {
-			return true;
+			GameObject* gameOb = (GameObject*)gooseLookCollision.node;
+			if (dynamic_cast<Player*>((GameObject*)gooseLookCollision.node)) {
+				targetPlayer = (Player*)gooseLookCollision.node;
+				return true;
+			}
 		}
-		return false;
 	}
+
 	return false;
 }

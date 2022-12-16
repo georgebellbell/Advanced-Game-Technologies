@@ -3,6 +3,7 @@
 #include "NavigationGrid.h"
 #include "NavigationMesh.h"
 #include "GameWorld.h"
+#include "Player.h"
 
 using std::vector;
 
@@ -34,6 +35,14 @@ namespace NCL::CSC8503 {
 
 		void SetWorld(GameWorld* world) {
 			humanWorld = world;
+		}
+
+		Player* ScaryPlayer() {
+			return (Player*)player;
+		}
+
+		void SetAsServerAI(bool isServer) {
+			this->isServer = isServer;
 		}
 	protected:
 		Vector3 GetForceDirection(Vector3 position);
@@ -70,7 +79,8 @@ namespace NCL::CSC8503 {
 		float scaredWaitTime = 3.0f;
 
 		bool hitByPlayer = false;
-		
+		bool isServer = false;
+		bool startedMoving = false;
 
 		void GeneratePassiveHSM();
 		void GenerateScaredHSM();
@@ -78,6 +88,8 @@ namespace NCL::CSC8503 {
 		GameWorld* humanWorld;
 
 		bool CanSeePlayer();
+
+		bool beganMoving = false;
 		
 	};
 }

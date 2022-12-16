@@ -1,6 +1,8 @@
 #pragma once
 #include "TutorialGame.h"
 #include "NetworkBase.h"
+#include "PushdownMachine.h"
+#include "PushdownState.h"
 
 namespace NCL {
 	namespace CSC8503 {
@@ -55,6 +57,16 @@ namespace NCL {
 
 			std::map<int, GameObject*> serverPlayers;
 			GameObject* localPlayer;
+
+			PushdownMachine* machine;
+			PushdownState* gameState;
+			PushdownState* pausedState;
+			PushdownState* highscoreState;
+
+			
+			
+
+
 		};
 	}
 }

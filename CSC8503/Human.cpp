@@ -17,6 +17,7 @@ using namespace CSC8503;
 
 Human::Human(const Vector3& position)
 {
+	
 	//CreateObject
 	AABBVolume* volume = new AABBVolume(Vector3(0.3f, 0.9f, 0.3f) * meshSize);
 	SetBoundingVolume((CollisionVolume*)volume);
@@ -25,9 +26,10 @@ Human::Human(const Vector3& position)
 		.SetPosition(position);
 	SetPhysicsObject(new PhysicsObject(&transform, this->boundingVolume));
 	GetPhysicsObject()->SetInverseMass(inverseMass);
-	GetPhysicsObject()->InitSphereInertia();
+	GetPhysicsObject()->InitCubeInertia();
+	physicsObject->SetElasticity(0.5f);
 
-	objectLayerMask = enemyLayerMask;
+	objectLayerMask = humanLayerMask;
 	objectLayer = enemy;
 
 	//CreateStateMachine
@@ -47,13 +49,10 @@ Human::Human(const Vector3& position)
 				movementSpeed = movementSpeed * 3;
 				FindPositionAwayFromPlayer();
 				renderObject->SetColour(Vector4(1, 0, 0, 1));
-				//lookingForPlayer = true;
 				return true;
 			}
 			return false;
-			// player hits human
-			// human target set to point at least a certain distance from player
-			// human speed doubled
+			
 		}
 	));
 
@@ -65,29 +64,26 @@ Human::Human(const Vector3& position)
 				FindRandomPosition();
 				renderObject->SetColour(Vector4(0, 0, 1, 1));
 				hitByPlayer = false;
-				//lookingForPlayer = false;
+				player = nullptr;
 				return true;
 			}
 			return false;
-			// hiding time is less than or equal to 0
-			// speed back to normal
-			//reset collsion detection
+			
 		}
 	));
 
 	targetPosition = new Vector3();
 	targetNodePosition = new Vector3();
 	
-	*targetPosition = transform.GetPosition();
-
 }
 
 void Human::GeneratePassiveHSM() {
 	passiveHSM = new HierarchalStateMachine();
 	State* patrol_follow = new State([&](float dt)->void
 		{
-			if (*targetPosition == transform.GetPosition()) {
+			if (!beganMoving) {
 				FindRandomPosition();
+				beganMoving = true;
 			}
 			MoveTowardsTargetPosition();
 
@@ -104,6 +100,8 @@ void Human::GeneratePassiveHSM() {
 	passiveHSM->GetStateMachine()->AddTransition(new StateTransition(patrol_follow, patrol_wait,
 		[&]()->bool
 		{
+		
+
 			float distance = (*targetPosition - transform.GetPosition()).Length();
 
 			if (distance < 10.0f) {
@@ -203,12 +201,14 @@ Human::~Human()
 
 void Human::Update(float dt)
 {
-	stateMachine->Update(dt);
+	if (isServer) {
+		stateMachine->Update(dt);
+	}
 }
 
 void Human::OnCollisionBegin(GameObject* otherObject)
 {
-	if (otherObject->GetName().compare(string("Player")) == 0) {
+	if (dynamic_cast<Player*>(otherObject)) {
 		hitByPlayer = true;
 		player = otherObject;
 	}
@@ -270,6 +270,8 @@ void Human::FindPositionAwayFromPlayer()
 
 void Human::MoveTowardsTargetPosition()
 {
+	if (path.empty()) 
+		return;
 	*targetNodePosition = path[currentNodeIndex];
 		
 	

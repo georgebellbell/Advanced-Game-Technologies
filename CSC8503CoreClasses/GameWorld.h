@@ -59,7 +59,7 @@ namespace NCL {
 			}
 
 			Layers raycastLayer = defaultLayer;
-			LayerMasks raycastLayerMask = defaultLayerMask;
+			LayerMasks raycastLayerMask = visionLayerMask;
 
 		protected:
 			std::vector<GameObject*> gameObjects;

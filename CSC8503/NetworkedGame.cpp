@@ -31,32 +31,38 @@ NetworkedGame::~NetworkedGame()	{
 	delete thisClient;
 }
 
+
 void NetworkedGame::StartAsServer() {
 	thisServer = new GameServer(NetworkBase::GetDefaultPort(), 4);
 
 	thisServer->RegisterPacketHandler(Received_State, this);
 	thisServer->RegisterPacketHandler(Player_Added, this);
 
+	SetGameAsServer();
 	StartLevel();
 }
 
  void NetworkedGame::StartAsClient(char a, char b, char c, char d) {
-	 //if (thisServer == nullptr) return;
-
 	thisClient = new GameClient();
-	thisClient->Connect(a, b, c, d, NetworkBase::GetDefaultPort());
+	bool connected = thisClient->Connect(a, b, c, d, NetworkBase::GetDefaultPort());
 
+	if (connected)
+		std::cout << "Client has made a connection\n";
+	else {
+		std::cout << "Client has not made a connection\n";
+	}
 	thisClient->RegisterPacketHandler(Delta_State, this);
 	thisClient->RegisterPacketHandler(Full_State, this);
 	thisClient->RegisterPacketHandler(Player_Connected, this);
 	thisClient->RegisterPacketHandler(Player_Disconnected, this);
 	thisClient->RegisterPacketHandler(Player_ID, this);
+	thisClient->RegisterPacketHandler(Game_Information, this);
+	thisClient->RegisterPacketHandler(Game_End, this);
 
 	player = AddPlayerToWorld(Vector3(100, 0, 100), -1);
 	
 	LockCameraToObject(player);
-	string title("CLIENT");
-	//Window::SetTitle(title);
+	gameRunning = true;
 
 	StartLevel();
 }
@@ -77,16 +83,60 @@ void NetworkedGame::UpdateGame(float dt) {
 		StartAsServer();
 	}
 	if (!thisClient && Window::GetKeyboard()->KeyPressed(KeyboardKeys::F10)) {
+
 		StartAsClient(127,0,0,1);
 	}
+	if (!thisClient && !thisServer) {
+		Debug::Print("Welcome to Goat Imitator!", Vector2(25, 5), Vector4(1, 0, 0, 1));
+		Debug::Print("Press F9 to start as server", Vector2(25, 35), Vector4(1, 0, 0, 1));
+		Debug::Print("Press F10 to start as client", Vector2(25, 45), Vector4(1, 0, 0, 1));
+	}
+
 
 	TutorialGame::UpdateGame(dt);
 }
 
 void NetworkedGame::UpdateAsServer(float dt) {
-	//player->PlayerMovement(dt);
 	world->GetMainCamera()->UpdateCamera(dt);
 	thisServer->UpdateServer();
+
+	if (gameRunning) {
+		gameTime -= dt;
+		if (gameTime <= 0.0f || objectsRemaining == 0) {
+			std::cout << "GAME HAS FINISHED\n";
+			GameEnded gameInfo;
+			thisServer->UpdateServer();
+			
+			int bestScore = 0;
+			int bestPlayerID = -2;
+			for (auto i : serverPlayers)
+			{
+				Player* currentPlayer = (Player*)i.second;
+				int score = currentPlayer->PlayerScore();
+				if (score > bestScore) {
+					bestScore = score;
+					bestPlayerID = i.first;
+				}
+			}
+
+			gameInfo.winningPlayerID = bestPlayerID;
+			thisServer->SendGlobalPacket(gameInfo);
+			gameRunning = false;
+			
+			
+		}
+		else {
+			GameInformation gameInfo;
+			thisServer->UpdateServer();
+			gameInfo.timeLeft = gameTime;
+			gameInfo.numberOfObjectsLeft = objectsRemaining = destructableObjects.size();
+			thisServer->SendGlobalPacket(gameInfo);
+			
+		}
+			
+		
+	}
+
 	packetsToSnapshot--;
 	if (packetsToSnapshot < 0) {
 		BroadcastSnapshot(false);
@@ -95,13 +145,12 @@ void NetworkedGame::UpdateAsServer(float dt) {
 	else {
 		BroadcastSnapshot(true);
 	}
-
-	//Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
-
 }
 
 void NetworkedGame::UpdateAsClient(float dt) {
-	
+
+
+
 	if (player->GetWorldID() == -1 && thisClient->connected) {
 		AddPlayerToServerPacket addPacket;
 		thisClient->UpdateClient();
@@ -111,41 +160,40 @@ void NetworkedGame::UpdateAsClient(float dt) {
 		player->SetWorldID(-2);
 		return;
 	}
-	
-	ClientPacket newPacket;
-	thisClient->UpdateClient();
-	newPacket.lastID = player->GetWorldID(); //You'll need to work this out somehow...
 
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
-		//fire button pressed!
-		newPacket.buttonstates[0] = 1;
-	}
-	
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
-		newPacket.buttonstates[1] = 1;
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::S)) {
-		newPacket.buttonstates[2] = 1;
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
-		newPacket.buttonstates[3] = 1;
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
-		newPacket.buttonstates[4] = 1;
-	}
-
-	//float pitch = (Window::GetMouse()->GetRelativePosition().y);
-	float yaw = (Window::GetMouse()->GetRelativePosition().x);
-	newPacket.yaw = yaw;
-	thisClient->SendPacket(newPacket);
+	if (player->GetPlayerMoveStatus() && gameRunning) {
+		ClientPacket newPacket;
+		thisClient->UpdateClient();
+		newPacket.lastID = player->GetWorldID(); 
 
 	
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
+			//fire button pressed!
+			newPacket.buttonstates[0] = 1;
+		}
 
-	Debug::Print("Player score:" + std::to_string(player->PlayerScore()), Vector2(5, 5), Debug::RED);
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::W)) {
+			newPacket.buttonstates[1] = 1;
+		}
+
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::S)) {
+			newPacket.buttonstates[2] = 1;
+		}
+
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::D)) {
+			newPacket.buttonstates[3] = 1;
+		}
+
+		if (Window::GetKeyboard()->KeyDown(KeyboardKeys::A)) {
+			newPacket.buttonstates[4] = 1;
+		}
+
+		float yaw = (Window::GetMouse()->GetRelativePosition().x);
+		newPacket.yaw = yaw;
+		thisClient->SendPacket(newPacket);
+	}
+
+
 
 }
 
@@ -160,10 +208,7 @@ void NetworkedGame::BroadcastSnapshot(bool deltaFrame) {
 		if (!o) {
 			continue;
 		}
-		//TODO - you'll need some way of determining
-		//when a player has sent the server an acknowledgement
-		//and store the lastID somewhere. A map between player
-		//and an int could work, or it could be part of a 
+
 		//NetworkPlayer struct. 
 		int playerState = 0;
 		GamePacket* newPacket = nullptr;
@@ -200,11 +245,13 @@ void NetworkedGame::UpdateMinimumState() {
 
 void NetworkedGame::SpawnPlayer() {
 	int playerIndex = serverPlayers.size();
+
+	gameRunning = true;
 	
-	Player* newPlayer = AddPlayerToWorld(Vector3(100, 10, 70 - 10 * playerIndex), playerIndex);
+	Player* newPlayer = AddPlayerToWorld(Vector3(100, 0, 100), playerIndex);
 
 	serverPlayers.insert(std::pair<int, GameObject*>(playerIndex, newPlayer));
-
+	goose->AddPlayerToGooseList(newPlayer);
 
 	AddPlayerWithID newPacket;
 	thisServer->UpdateServer();
@@ -213,7 +260,7 @@ void NetworkedGame::SpawnPlayer() {
 	newPacket.numberOfPlayers = playerIndex;
 	thisServer->SendGlobalPacket(newPacket);
 
-	std::cout << "Current player count: " << serverPlayers.size();
+	std::cout << "Current player count: \n" << serverPlayers.size();
 
 
 }
@@ -224,7 +271,6 @@ void NetworkedGame::StartLevel() {
 }
 
 void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {
-	
 	std::vector<GameObject*>::const_iterator first;
 	std::vector<GameObject*>::const_iterator last;
 
@@ -244,6 +290,7 @@ void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {
 			player->SetWorldID(recieved_server->newPlayerID);
 			player->GetNetworkObject()->SetNetworkID(recieved_server->newPlayerID);
 			serverPlayers.insert(std::pair<int, GameObject*>(recieved_server->newPlayerID, player));
+			
 
 			for (int i = 0; i < recieved_server->numberOfPlayers; i++)
 			{
@@ -263,6 +310,23 @@ void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {
 		return;
 	}
 
+	if (type == Game_Information) {
+		GameInformation* recieved_info = (GameInformation*)payload;
+		gameTime = recieved_info->timeLeft;
+		objectsRemaining = recieved_info->numberOfObjectsLeft;
+		return;
+	}
+	if (type == Game_End) {
+		GameEnded* recieved_info = (GameEnded*)payload;
+		winningPlayerID = recieved_info->winningPlayerID;
+		gameRunning = false;
+		playerCanMove = false;
+		std::cout << "GAME OVER, player " << winningPlayerID + 1 << " won\n";
+		return;
+	}
+
+
+
 	for (auto i = first; i != last; ++i) {
 		NetworkObject* o = (*i)->GetNetworkObject();
 		if (!o) continue;
@@ -271,6 +335,7 @@ void NetworkedGame::ReceivePacket(int type, GamePacket* payload, int source) {
 		{
 			o->ReadPacket(*payload);
 		}
+
 
 		if (type == Received_State) {
 			ClientPacket* recieved_client = (ClientPacket*)payload;

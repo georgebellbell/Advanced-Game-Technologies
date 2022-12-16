@@ -14,6 +14,8 @@
 #include "NavigationGrid.h"
 #include "NavigationMesh.h"
 #include "TriggerObject.h"
+#include "PushdownMachine.h"
+#include "PushdownState.h"
 
 namespace NCL {
 	namespace CSC8503 {
@@ -24,14 +26,22 @@ namespace NCL {
 
 			virtual void UpdateGame(float dt);
 
-			
-
+			void SetGameAsServer() {
+				isServer = true;
+				goose->SetAsServerAI(true);
+				for (auto i : humanObjects)
+				{
+					i->SetAsServerAI(true);
+				}
+			}
 		protected:
 			void InitialiseAssets();
 
 			void InitCamera();
 			void UpdateCamera();
 			void UpdateKeys();
+			void UpdateDestructableObjects();
+			void UpdatePowerups();
 
 			void ToggleGravity();
 
@@ -49,6 +59,7 @@ namespace NCL {
 
 			GameObject* AddMainFloorToWorld(const Vector3& position);
 			GameObject* AddMazeFloorToWorld(const Vector3& position);
+			GameObject* AddKillFloorToWorld(const Vector3& position);
 			GameObject* AddSphereToWorld(const Vector3& position, float radius, float inverseMass = 10.0f, bool hollow = false);
 			GameObject* AddCubeToWorld(const Vector3& position, Vector3 dimensions, float inverseMass = 10.0f);
 
@@ -114,6 +125,20 @@ namespace NCL {
 			NavigationGrid* mazeGrid;
 
 			Player* player;
+			Goose* goose;
+			bool isServer = false;
+			bool playerCanMove = true;
+
+			PushdownMachine* machine;
+			PushdownState* gameState;
+			PushdownState* pausedState;
+			PushdownState* highscoreState;
+
+			float gameTime = 300.0f;
+			int objectsRemaining = 0;
+			std::map<int, int> playerScores;
+			bool gameRunning = false;
+			int winningPlayerID;
 
 		};
 	}

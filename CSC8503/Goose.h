@@ -17,7 +17,7 @@ namespace NCL::CSC8503 {
 		Goose(const Vector3& position);
 		~Goose();
 
-		//void Update(float dt)
+		void Update(float dt);
 
 		void OnCollisionBegin(GameObject* otherObject);
 
@@ -40,6 +40,14 @@ namespace NCL::CSC8503 {
 		void AwakenGoose() {
 			dormant = false;
 			std::cout << "he has awoken...";
+		}
+
+		void SetAsServerAI(bool isServer) {
+			this->isServer = isServer;
+		}
+
+		void AddPlayerToGooseList(Player* newPlayer) {
+			victims.push_back(newPlayer);
 		}
 
 		float xOffset;
@@ -91,6 +99,11 @@ namespace NCL::CSC8503 {
 		bool CheckForDestroyedObjects();
 
 		vector<DestructableObject*> protectedObjects;
+
+		bool isServer = false;
+
+		vector<Player*> victims;
+		Player* targetPlayer;
 	};
 
 

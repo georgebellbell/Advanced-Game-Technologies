@@ -58,6 +58,27 @@ namespace NCL::CSC8503 {
 		}
 	};
 
+	struct GameInformation : public GamePacket {
+		int lastID;
+		float timeLeft;
+		int numberOfObjectsLeft;
+		GameInformation() {
+			type = Game_Information;
+			size = sizeof(GameInformation);
+		}
+	};
+	struct GameEnded : public GamePacket {
+		int lastID;
+		int winningPlayerID;
+		
+		GameEnded() {
+			type = Game_End;
+			size = sizeof(GameEnded);
+		}
+	};
+
+
+
 
 	class NetworkObject		{
 	public:

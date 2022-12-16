@@ -108,6 +108,7 @@ void Player::InitialiseStateMachine()
 		{
 			if (dead) {
 				objectLayer = deadPlayer;
+				ignoreGravity = true;
 				renderObject->SetColour(Vector4(0, 0, 0, 0.2f));
 				return true;
 			}
@@ -129,11 +130,7 @@ void Player::InitialiseStateMachine()
 			return false;
 		}
 	));
-
-
 }
-
-
 
 Player::~Player()
 {
@@ -149,6 +146,8 @@ void Player::OnCollisionBegin(GameObject* otherObject)
 {
 	string floor("floor");
 	string powerup("powerup");
+	string killFloor("killFloor");
+	string goose("goose");
 
 	string collisionObjectName = otherObject->GetName();
 
@@ -158,6 +157,12 @@ void Player::OnCollisionBegin(GameObject* otherObject)
 
 	if (collisionObjectName.compare(powerup) == 0) {
 		PowerupCollected((Powerup*)otherObject);
+	}
+
+	if ((collisionObjectName.compare(killFloor) == 0 ||  
+		collisionObjectName.compare(goose) == 0)
+		&& !dead) {
+		KillPlayer();
 	}
 }
 
@@ -183,10 +188,13 @@ void Player::PowerupCollected(Powerup* powerup)
 
 void Player::PlayerMovement(float dt)
 {
+	if (!canMove) return;
 	float pitch = (Window::GetMouse()->GetRelativePosition().y);
 	float yaw = (Window::GetMouse()->GetRelativePosition().x);
 
 	RotatePlayer(pitch, yaw);
+
+	return; // stuff below is now done server side
 
 
 	if (Window::GetKeyboard()->KeyDown(KeyboardKeys::SPACE)) {
@@ -240,9 +248,9 @@ void Player::MovePlayer(int keyIndex) {
 
 void Player::RotatePlayer(float pitch, float yaw)
 {
-	//Vector3 rotation(0.0f, -yaw * rotationSpeed, 0.0f);
+	//Vector3 rotation(0.0f, -yaw * rotationSpeed, 0.0f); // COMMENT OUT THESE LINES
 
-	//physicsObject->SetAngularVelocity(rotation);
+	//physicsObject->SetAngularVelocity(rotation); // COMMENT OUT THESE LINES
 
 
 	cameraOffset.y = cameraOffset.y + (pitch * rotationSpeed);

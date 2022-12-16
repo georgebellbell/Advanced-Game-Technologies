@@ -25,7 +25,7 @@ GameWorld::~GameWorld()	{
 void GameWorld::Clear() {
 	gameObjects.clear();
 	constraints.clear();
-	worldIDCounter		= 0;
+	worldIDCounter		= 10;
 	worldStateCounter	= 0;
 }
 

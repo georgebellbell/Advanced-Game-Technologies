@@ -7,7 +7,6 @@ NetworkObject::NetworkObject(GameObject& o, int id) : object(o)	{
 	deltaErrors = 0;
 	fullErrors  = 0;
 	networkID   = id;
-	o.SetNetworkObject(this);
 }
 
 NetworkObject::~NetworkObject()	{
